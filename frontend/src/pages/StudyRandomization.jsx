@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import Header from '../components/Header'
+import { INVESTIGATOR_LABEL_PLURAL } from '../labels'
 
 const VALID_METHODS = ['Permuted Block', 'Simple Random', 'Minimization']
 
@@ -360,7 +361,7 @@ function StudyRandomization() {
                     placeholder="e.g. 6"
                   />
                   <span className="field-hint">
-                    Leave blank to use a fixed block size equal to Min. Set a larger value for variable block sizes, which prevents investigators from predicting upcoming assignments.
+                    Leave blank to use a fixed block size equal to Min. Set a larger value for variable block sizes, which prevents {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} from predicting upcoming assignments.
                   </span>
                 </div>
               </div>

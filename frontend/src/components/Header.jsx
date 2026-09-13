@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { ORGANIZER_LABEL, INVESTIGATOR_LABEL } from '../labels'
 
 function Header({ children }) {
   return (
@@ -25,13 +26,13 @@ function Header({ children }) {
             to="/organizer"
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            Organizer
+            {ORGANIZER_LABEL}
           </NavLink>
           <NavLink
             to="/investigator"
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            Investigator
+            {INVESTIGATOR_LABEL}
           </NavLink>
         </nav>
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { apiFetch } from '../api'
 import Header from '../components/Header'
+import { INVESTIGATOR_LABEL } from '../labels'
 
 function StudyHome() {
   const { studyId } = useParams()
@@ -328,7 +329,7 @@ function StudyHome() {
                             <th>Treatment Arm</th>
                             <th>Blind Status</th>
                             <th>Patient ID</th>
-                            <th>Investigator ID</th>
+                            <th>{INVESTIGATOR_LABEL} ID</th>
                             <th>Assigned Date</th>
                           </tr>
                         </thead>

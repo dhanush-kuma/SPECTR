@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiFetch, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
+import { INVESTIGATOR_LABEL_PLURAL } from '../labels'
 
 function parseApiError(detail) {
   if (typeof detail === 'string') return detail
@@ -192,7 +193,7 @@ function CreateStudy() {
                     <span>Emergency Unblinding Allowed</span>
                   </label>
                   <span className="field-hint">
-                    Permits investigators to perform code-breaks in emergency situations.
+                    Permits {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} to perform code-breaks in emergency situations.
                   </span>
                 </div>
               </div>

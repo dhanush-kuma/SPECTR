@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
+import { INVESTIGATOR_LABEL } from '../labels'
+import { ORGANIZER_LABEL } from '../labels'
 
 function InvestigatorHome() {
   const navigate = useNavigate()
@@ -175,7 +177,7 @@ function InvestigatorHome() {
         ) : (
           <>
             {logoutError && <p className="error">{logoutError}</p>}
-            <h1>{investigator.study_title || 'Investigator Dashboard'}</h1>
+            <h1>{investigator.study_title || `${INVESTIGATOR_LABEL} Dashboard`}</h1>
 
             {investigator.study_description && (
               <p style={{ fontSize: '15px', color: '#444', marginTop: '0', marginBottom: '24px', lineHeight: '1.5' }}>
@@ -343,7 +345,7 @@ function InvestigatorHome() {
                 lineHeight: '1.4',
               }}
             >
-              <strong>Notice:</strong> This unblinding event will be permanently recorded in the audit log and made visible to the study organizer.
+              <strong>Notice:</strong> This unblinding event will be permanently recorded in the audit log and made visible to the study {ORGANIZER_LABEL}.
             </p>
 
             {unblindError && (

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiFetch, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
+import { ORGANIZER_LABEL } from '../labels'
 
 function OrganizerLogin() {
   const navigate = useNavigate()
@@ -42,13 +43,13 @@ function OrganizerLogin() {
       <Header />
 
       <main className="app">
-        <h1>Organizer Portal</h1>
+        <h1>{ORGANIZER_LABEL} Portal</h1>
 
         <div className="setup-card">
           <div className="setup-card__header">
-            <span className="setup-badge">Organizer Area</span>
-            <h2>Organizer Sign In</h2>
-            <p>Enter your organizer credentials to log in to the randomizer.</p>
+            <span className="setup-badge">{ORGANIZER_LABEL} Area</span>
+            <h2>{ORGANIZER_LABEL} Sign In</h2>
+            <p>Enter your {ORGANIZER_LABEL} credentials to log in to the randomizer.</p>
           </div>
 
           <form className="setup-form" onSubmit={handleLogin} noValidate>
@@ -59,7 +60,7 @@ function OrganizerLogin() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="organizer"
+                placeholder="username"
                 required
                 autoComplete="username"
                 autoFocus

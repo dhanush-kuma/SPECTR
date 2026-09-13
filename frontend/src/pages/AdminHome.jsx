@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
+import { ORGANIZER_LABEL, ORGANIZER_LABEL_PLURAL } from '../labels'
 
 function AdminHome() {
   const navigate = useNavigate()
@@ -69,11 +70,11 @@ function AdminHome() {
       const data = await res.json()
 
       if (!res.ok) {
-        setFormError(data.detail || 'Failed to create organizer.')
+        setFormError(data.detail || `Failed to create ${ORGANIZER_LABEL}.`)
         return
       }
 
-      setSuccessMsg(`Organizer "${data.username}" created successfully.`)
+      setSuccessMsg(`${ORGANIZER_LABEL} "${data.username}" created successfully.`)
       setOrgUsername('')
       setOrgPassword('')
       setShowForm(false)
@@ -126,14 +127,14 @@ function AdminHome() {
 
             {/* ── Organizer section ── */}
             <div className="section-header">
-              <h2 className="section-title">Organizers</h2>
+              <h2 className="section-title">{ORGANIZER_LABEL_PLURAL}</h2>
               {!showForm && (
                 <button
                   id="btn-create-organizer"
                   className="btn-primary"
                   onClick={() => { setSuccessMsg(null); setShowForm(true) }}
                 >
-                  + Create Organizer
+                  + Create a new {ORGANIZER_LABEL}
                 </button>
               )}
             </div>
@@ -147,9 +148,9 @@ function AdminHome() {
             {showForm && (
               <div className="setup-card" style={{ marginBottom: '20px' }}>
                 <div className="setup-card__header">
-                  <span className="setup-badge">New Organizer</span>
-                  <h2>Create Organizer Account</h2>
-                  <p>The organizer will be able to manage study sessions.</p>
+                  <span className="setup-badge">New {ORGANIZER_LABEL}</span>
+                  <h2>Create {ORGANIZER_LABEL} Account</h2>
+                  <p>The {ORGANIZER_LABEL} will be able to manage study sessions.</p>
                 </div>
                 <form className="setup-form" onSubmit={handleCreateOrganizer} noValidate>
                   <div className="field">
@@ -159,7 +160,7 @@ function AdminHome() {
                       type="text"
                       value={orgUsername}
                       onChange={(e) => setOrgUsername(e.target.value)}
-                      placeholder="organizer_name"
+                      placeholder="username"
                       required
                       autoFocus
                     />
@@ -177,7 +178,7 @@ function AdminHome() {
                   {formError && <p className="error">{formError}</p>}
                   <div className="form-actions">
                     <button id="btn-org-submit" type="submit" className="btn-primary" disabled={submitting}>
-                      {submitting ? 'Creating…' : 'Create Organizer'}
+                      {submitting ? 'Creating…' : `Create ${ORGANIZER_LABEL}`}
                     </button>
                     <button type="button" className="btn-secondary" onClick={cancelForm}>
                       Cancel
@@ -189,7 +190,7 @@ function AdminHome() {
 
             {/* ── Organizer table ── */}
             {organizers.length === 0 ? (
-              <p className="empty-state">No organizers yet. Create one above.</p>
+              <p className="empty-state">No {ORGANIZER_LABEL_PLURAL} yet. Create one above.</p>
             ) : (
               <table className="data-table">
                 <thead>

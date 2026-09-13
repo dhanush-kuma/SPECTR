@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { apiFetch, apiUpload, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
+import { INVESTIGATOR_LABEL, INVESTIGATOR_LABEL_PLURAL } from '../labels'
 
 const STATUS_LABELS = {
   inactive: { label: 'Inactive', cls: 'badge--inactive' },
@@ -116,12 +117,12 @@ function StudyInvestigators() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.detail || 'Failed to add investigator.')
+        setError(data.detail || `Failed to add ${INVESTIGATOR_LABEL.toLowerCase()}.`)
         return
       }
 
       setSuccessMsg(
-        `Investigator added (username: ${data.username}). Credentials sent to ${data.email}.`
+        `${INVESTIGATOR_LABEL} added (username: ${data.username}). Credentials sent to ${data.email}.`
       )
       setEmail('')
       setName('')
@@ -167,7 +168,7 @@ function StudyInvestigators() {
         return
       }
       setPendingAction(null)
-      setSuccessMsg('Investigator access restored. They can log in again with their existing credentials.')
+      setSuccessMsg(`${INVESTIGATOR_LABEL} access restored. They can log in again with their existing credentials.`)
       loadInvestigators()
     } catch {
       alert('Could not connect to backend.')
@@ -217,7 +218,7 @@ function StudyInvestigators() {
           <Link to={`/organizer/studies/${studyId}/home`} className="back-link">
             ← Back to Study
           </Link>
-          <h1>Investigators</h1>
+          <h1>{INVESTIGATOR_LABEL_PLURAL}</h1>
         </div>
 
         {!study ? (
@@ -236,7 +237,7 @@ function StudyInvestigators() {
               <div className="setup-card">
                 <div className="setup-card__header">
                   <span className="setup-badge">Single Invite</span>
-                  <h2>Invite one investigator</h2>
+                  <h2>Invite one {INVESTIGATOR_LABEL.toLowerCase()}</h2>
                   <p>
                     The system will generate a username and temporary password and send them
                     to the provided email address.
@@ -251,7 +252,7 @@ function StudyInvestigators() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="investigator@hospital.org"
+                      placeholder="site.investigator@hospital.org"
                       required
                     />
                   </div>
@@ -268,7 +269,7 @@ function StudyInvestigators() {
                   {error && <p className="error">{error}</p>}
                   {successMsg && <p className="success-msg">{successMsg}</p>}
                   <button type="submit" className="btn-primary" disabled={submitting}>
-                    {submitting ? 'Adding…' : 'Add Investigator'}
+                    {submitting ? 'Adding…' : `Add ${INVESTIGATOR_LABEL}`}
                   </button>
                 </form>
               </div>
@@ -278,7 +279,7 @@ function StudyInvestigators() {
                   <span className="setup-badge">Bulk Invite</span>
                   <h2>Upload CSV</h2>
                   <p>
-                    Invite many investigators at once. Each row is processed and credentials
+                    Invite many {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} at once. Each row is processed and credentials
                     are emailed automatically.
                   </p>
                 </div>
@@ -288,7 +289,7 @@ function StudyInvestigators() {
                     <li>CSV must have exactly <strong>2 columns</strong>: email, then name.</li>
                     <li>Do <strong>not</strong> include a header row — data only.</li>
                     <li>Name is optional and may be left empty; email is required on every row.</li>
-                    <li>Maximum 100 investigators per file.</li>
+                    <li>Maximum 100 {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} per file.</li>
                     <li>Maximum file size: <strong>1 MB</strong>.</li>
                   </ul>
 
@@ -342,12 +343,12 @@ function StudyInvestigators() {
 
             {/* Investigators table */}
             <div className="section-header" style={{ marginTop: '32px' }}>
-              <h2 className="section-title">Investigators</h2>
+              <h2 className="section-title">{INVESTIGATOR_LABEL_PLURAL}</h2>
             </div>
 
             {investigators.length === 0 ? (
               <div className="empty-state">
-                <p>No investigators added yet.</p>
+                <p>No {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} added yet.</p>
               </div>
             ) : (
               <table className="data-table">

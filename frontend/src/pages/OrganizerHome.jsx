@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
+import { ORGANIZER_LABEL, INVESTIGATOR_LABEL_PLURAL } from '../labels'
 
 function OrganizerHome() {
   const navigate = useNavigate()
@@ -72,7 +73,7 @@ function OrganizerHome() {
       </Header>
 
       <main className="app">
-        <h1>Organizer Dashboard</h1>
+        <h1>{ORGANIZER_LABEL} Dashboard</h1>
 
         {!organizer ? (
           <p className="loading">Verifying session…</p>
@@ -161,7 +162,7 @@ function OrganizerHome() {
                             className="btn-secondary"
                             style={{ textDecoration: 'none', fontSize: '12px', padding: '4px 10px' }}
                           >
-                            Investigators
+                            {INVESTIGATOR_LABEL_PLURAL}
                           </Link>
                         </div>
                       </td>

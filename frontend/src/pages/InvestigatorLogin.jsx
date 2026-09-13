@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiFetch, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
+import { INVESTIGATOR_LABEL } from '../labels'
 
 function InvestigatorLogin() {
   const navigate = useNavigate()
@@ -55,11 +56,11 @@ function InvestigatorLogin() {
       <Header />
 
       <main className="app">
-        <h1>Investigator Login</h1>
+        <h1>{INVESTIGATOR_LABEL} Login</h1>
 
         <div className="setup-card">
           <div className="setup-card__header">
-            <span className="setup-badge">Investigator Portal</span>
+            <span className="setup-badge">{INVESTIGATOR_LABEL} Portal</span>
             <h2>Sign In</h2>
             <p>Enter your trial ID, username, and password to continue.</p>
           </div>
