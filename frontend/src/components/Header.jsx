@@ -26,13 +26,13 @@ function Header({ children }) {
             to="/organizer"
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            {ORGANIZER_LABEL}
+            Central Trial Coordinator (CTC)
           </NavLink>
           <NavLink
             to="/investigator"
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            {INVESTIGATOR_LABEL}
+            Study Investigator (SI)
           </NavLink>
         </nav>
       </div>
