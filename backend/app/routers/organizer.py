@@ -23,6 +23,7 @@ from ..core.rate_limit import limiter
 from ..core.security import (
     ROLE_ORGANIZER,
     bump_investigator_session,
+    cookie_max_age_for_access_token,
     create_access_token,
     get_current_organizer,
     revoke_token,
@@ -54,7 +55,6 @@ from ..schemas import (
 router = APIRouter(prefix="/organizer", tags=["organizer"])
 
 COOKIE_NAME = "organizer_access_token"
-COOKIE_MAX_AGE = 60 * 60 * 24
 
 
 def _get_study_for_organizer(study_id: int, organizer_id: int, db: Session) -> Study:
@@ -89,9 +89,11 @@ def _ensure_protocol_code_available(
 @router.get("/me", response_model=OrganizerInfo)
 def get_me(
     response: Response,
+    organizer_access_token: str | None = Cookie(default=None),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
-    csrf_token = set_csrf_cookie(response, COOKIE_MAX_AGE)
+    cookie_max_age = cookie_max_age_for_access_token(organizer_access_token)
+    csrf_token = set_csrf_cookie(response, cookie_max_age)
     return OrganizerInfo(username=current_organizer.username, csrf_token=csrf_token)
 
 
@@ -120,9 +122,11 @@ def login(
         audit("organizer.login.failed", username=payload.username, reason="deactivated")
         raise HTTPException(status_code=401, detail="Organizer account is deactivated.")
 
-    token = create_access_token(organizer.username, ROLE_ORGANIZER)
-    set_auth_cookie(response, COOKIE_NAME, token, COOKIE_MAX_AGE)
-    csrf_token = set_csrf_cookie(response, COOKIE_MAX_AGE)
+    remember_me = payload.remember_me
+    token = create_access_token(organizer.username, ROLE_ORGANIZER, remember_me=remember_me)
+    cookie_max_age = cookie_max_age_for_access_token(token)
+    set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
+    csrf_token = set_csrf_cookie(response, cookie_max_age)
     audit(
         "organizer.login.success",
         username=organizer.username,

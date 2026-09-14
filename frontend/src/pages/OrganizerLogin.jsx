@@ -9,6 +9,7 @@ function OrganizerLogin() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -20,7 +21,7 @@ function OrganizerLogin() {
     try {
       const res = await apiFetch('/organizer/login', {
         method: 'POST',
-        json: { username, password },
+        json: { username, password, remember_me: rememberMe },
       })
       const data = await res.json()
 
@@ -77,6 +78,18 @@ function OrganizerLogin() {
                 required
                 autoComplete="current-password"
               />
+            </div>
+
+            <div className="field field-checkbox">
+              <label htmlFor="org-remember-me" className="checkbox-label">
+                <input
+                  id="org-remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                Keep me signed in for 30 days
+              </label>
             </div>
 
             {error && <p className="error">{error}</p>}

@@ -82,31 +82,36 @@ def verify_setup_token(token: str | None) -> None:
         raise ValueError("Invalid setup token.")
 
 
-def set_auth_cookie(response: Response, key: str, value: str, max_age: int) -> None:
-    response.set_cookie(
-        key=key,
-        value=value,
-        httponly=True,
-        samesite=COOKIE_SAMESITE,
-        secure=COOKIE_SECURE,
-        max_age=max_age,
-    )
+def set_auth_cookie(response: Response, key: str, value: str, max_age: int | None) -> None:
+    """When max_age is None, the browser treats the cookie as a session cookie."""
+    kwargs: dict = {
+        "key": key,
+        "value": value,
+        "httponly": True,
+        "samesite": COOKIE_SAMESITE,
+        "secure": COOKIE_SECURE,
+    }
+    if max_age is not None:
+        kwargs["max_age"] = max_age
+    response.set_cookie(**kwargs)
 
 
 def clear_auth_cookie(response: Response, key: str) -> None:
     response.delete_cookie(key=key, samesite=COOKIE_SAMESITE, secure=COOKIE_SECURE)
 
 
-def set_csrf_cookie(response: Response, max_age: int) -> str:
+def set_csrf_cookie(response: Response, max_age: int | None) -> str:
     token = secrets.token_urlsafe(32)
-    response.set_cookie(
-        key=CSRF_COOKIE_NAME,
-        value=token,
-        httponly=False,
-        samesite=COOKIE_SAMESITE,
-        secure=COOKIE_SECURE,
-        max_age=max_age,
-    )
+    kwargs: dict = {
+        "key": CSRF_COOKIE_NAME,
+        "value": token,
+        "httponly": False,
+        "samesite": COOKIE_SAMESITE,
+        "secure": COOKIE_SECURE,
+    }
+    if max_age is not None:
+        kwargs["max_age"] = max_age
+    response.set_cookie(**kwargs)
     return token
 
 

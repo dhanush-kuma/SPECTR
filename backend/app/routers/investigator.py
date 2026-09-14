@@ -11,8 +11,10 @@ from ..core.rate_limit import limiter
 from ..core.security import (
     ROLE_INVESTIGATOR,
     bump_investigator_session,
+    cookie_max_age_for_access_token,
     create_access_token,
     get_current_investigator,
+    remember_me_from_access_token,
     revoke_token,
 )
 from ..database import get_db
@@ -31,7 +33,6 @@ from ..schemas import (
 router = APIRouter(prefix="/investigator", tags=["investigator"])
 
 COOKIE_NAME = "investigator_access_token"
-COOKIE_MAX_AGE = 60 * 60 * 24
 
 
 def _investigator_record_out(
@@ -109,13 +110,16 @@ def login(
         db.commit()
 
     # JWT sub stores the investigator's DB id (study-unique usernames would collide across studies)
+    remember_me = payload.remember_me
     token = create_access_token(
         str(investigator.id),
         ROLE_INVESTIGATOR,
         session_version=investigator.session_version,
+        remember_me=remember_me,
     )
-    set_auth_cookie(response, COOKIE_NAME, token, COOKIE_MAX_AGE)
-    csrf_token = set_csrf_cookie(response, COOKIE_MAX_AGE)
+    cookie_max_age = cookie_max_age_for_access_token(token)
+    set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
+    csrf_token = set_csrf_cookie(response, cookie_max_age)
     audit(
         "investigator.login.success",
         investigator_id=investigator.id,
@@ -143,11 +147,13 @@ def logout(
 @router.get("/me", response_model=InvestigatorInfo)
 def get_me(
     response: Response,
+    investigator_access_token: str | None = Cookie(default=None),
     current_investigator: Investigator = Depends(get_current_investigator),
     db: Session = Depends(get_db),
 ):
     study = db.query(Study).filter(Study.id == current_investigator.study_id).first()
-    csrf_token = set_csrf_cookie(response, COOKIE_MAX_AGE)
+    cookie_max_age = cookie_max_age_for_access_token(investigator_access_token)
+    csrf_token = set_csrf_cookie(response, cookie_max_age)
     return InvestigatorInfo(
         id=current_investigator.id,
         username=current_investigator.username,
@@ -187,13 +193,16 @@ def change_password(
     db.commit()
     db.refresh(current_investigator)
 
+    remember_me = remember_me_from_access_token(investigator_access_token)
     token = create_access_token(
         str(current_investigator.id),
         ROLE_INVESTIGATOR,
         session_version=current_investigator.session_version,
+        remember_me=remember_me,
     )
-    set_auth_cookie(response, COOKIE_NAME, token, COOKIE_MAX_AGE)
-    csrf_token = set_csrf_cookie(response, COOKIE_MAX_AGE)
+    cookie_max_age = cookie_max_age_for_access_token(token)
+    set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
+    csrf_token = set_csrf_cookie(response, cookie_max_age)
     audit("investigator.password_changed", investigator_id=current_investigator.id)
     return LoginResponse(message="Password changed successfully.", csrf_token=csrf_token)
 

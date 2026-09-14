@@ -60,6 +60,7 @@ class SetupResponse(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+    remember_me: bool = False
 
     @field_validator("password")
     @classmethod
@@ -71,6 +72,7 @@ class InvestigatorLoginRequest(BaseModel):
     trial_id: str
     username: str
     password: str
+    remember_me: bool = False
 
     @field_validator("trial_id")
     @classmethod

@@ -11,22 +11,58 @@ from ..models import Admin, Investigator, Organizer, RevokedToken
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
+REMEMBER_ME_DAYS = 30
+REMEMBER_ME_MAX_AGE_SECONDS = REMEMBER_ME_DAYS * 24 * 60 * 60
+ADMIN_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRE_HOURS * 60 * 60
 ROLE_ADMIN = "admin"
 ROLE_ORGANIZER = "organizer"
 ROLE_INVESTIGATOR = "investigator"
 
 
-def create_access_token(username: str, role: str, *, session_version: int | None = None) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+def create_access_token(
+    username: str,
+    role: str,
+    *,
+    session_version: int | None = None,
+    remember_me: bool = False,
+) -> str:
+    if role == ROLE_ADMIN:
+        expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    elif remember_me:
+        expire = datetime.now(timezone.utc) + timedelta(days=REMEMBER_ME_DAYS)
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     payload = {
         "sub": username,
         "role": role,
         "jti": str(uuid.uuid4()),
         "exp": expire,
     }
+    if role in (ROLE_ORGANIZER, ROLE_INVESTIGATOR):
+        payload["rm"] = remember_me
     if session_version is not None:
         payload["sv"] = session_version
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def cookie_max_age_for_access_token(access_token: str | None) -> int | None:
+    """Persistent cookie max-age from JWT; None means browser session cookie."""
+    if not access_token:
+        return None
+    payload = decode_token(access_token)
+    if not payload:
+        return None
+    role = payload.get("role")
+    if role == ROLE_ADMIN:
+        return ADMIN_COOKIE_MAX_AGE_SECONDS
+    if payload.get("rm"):
+        return REMEMBER_ME_MAX_AGE_SECONDS
+    return None
+
+
+def remember_me_from_access_token(access_token: str | None) -> bool:
+    payload = decode_token(access_token) if access_token else None
+    return bool(payload and payload.get("rm"))
 
 
 def decode_token(token: str) -> dict | None:

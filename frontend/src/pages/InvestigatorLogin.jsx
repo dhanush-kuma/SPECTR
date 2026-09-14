@@ -12,6 +12,7 @@ function InvestigatorLogin() {
   const [trialId, setTrialId] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const trialIdFromLink = Boolean(searchParams.get('tid'))
@@ -33,6 +34,7 @@ function InvestigatorLogin() {
           trial_id: trialId.trim(),
           username: username.trim(),
           password,
+          remember_me: rememberMe,
         },
       })
       const data = await res.json()
@@ -101,6 +103,17 @@ function InvestigatorLogin() {
                 required
                 autoComplete="current-password"
               />
+            </div>
+            <div className="field field-checkbox">
+              <label htmlFor="inv-remember-me" className="checkbox-label">
+                <input
+                  id="inv-remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                Keep me signed in for 30 days
+              </label>
             </div>
             {error && <p className="error">{error}</p>}
             <button type="submit" className="btn-primary" disabled={submitting}>
