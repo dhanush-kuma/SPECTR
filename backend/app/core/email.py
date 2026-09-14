@@ -76,14 +76,14 @@ def _send_via_smtp(to: str, subject: str, body: str) -> None:
 
 def send_email(to: str, subject: str, body: str) -> None:
     if not email_is_configured():
-        logger.warning(
-            "Email not configured — would send to %s | subject: %s "
-            "(body omitted; may contain credentials)",
-            to,
-            subject,
-        )
         if IS_PRODUCTION:
             raise RuntimeError("Email service is not configured.")
+        logger.warning(
+            "Email not configured — would send to %s | subject: %s\n%s",
+            to,
+            subject,
+            body,
+        )
         return
 
     try:
