@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { apiFetch } from '../api'
 import Header from '../components/Header'
-import { INVESTIGATOR_LABEL } from '../labels'
+import { ORGANIZER_LABEL, INVESTIGATOR_LABEL } from '../labels'
 
 function StudyHome() {
   const { studyId } = useParams()
@@ -37,9 +37,11 @@ function StudyHome() {
       .catch(() => navigate('/organizer/home', { replace: true }))
   }, [studyId, navigate])
 
+  const hasRandomizationView = study && ['Generated', 'Active', 'Complete'].includes(study.status)
+
   // Fetch Randomized Sequence Records once randomization exists
   useEffect(() => {
-    if (!study || (study.status !== 'Active' && study.status !== 'Generated')) return
+    if (!hasRandomizationView) return
 
     setLoadingRecords(true)
     const params = new URLSearchParams({
@@ -56,10 +58,10 @@ function StudyHome() {
       })
       .catch(() => {})
       .finally(() => setLoadingRecords(false))
-  }, [studyId, study, page, perPage, search, statusFilter])
+  }, [studyId, hasRandomizationView, page, perPage, search, statusFilter])
 
   useEffect(() => {
-    if (!study || (study.status !== 'Active' && study.status !== 'Generated')) return
+    if (!hasRandomizationView) return
 
     setLoadingSites(true)
     apiFetch(`/organizer/studies/${studyId}/sites`)
@@ -67,7 +69,7 @@ function StudyHome() {
       .then((data) => { if (Array.isArray(data)) setSitesData(data) })
       .catch(() => setSitesData([]))
       .finally(() => setLoadingSites(false))
-  }, [studyId, study])
+  }, [studyId, hasRandomizationView])
 
   // Reset page to 1 when search or statusFilter changes
   function handleSearchChange(e) {
@@ -107,7 +109,7 @@ function StudyHome() {
                 <p className="message" style={{ margin: 0 }}>
                   <strong>{study.protocol_code}</strong>
                   {' · '}
-                  <span className={`badge badge--${study.status === 'Active' || study.status === 'Generated' ? 'active' : 'inactive'}`}>
+                  <span className={`badge badge--${study.status === 'Draft' ? 'inactive' : 'active'}`}>
                     {study.status}
                   </span>
                   {' · '}
@@ -122,6 +124,11 @@ function StudyHome() {
                       [Randomization Generated]
                     </span>
                   )}
+                  {study.status === 'Complete' && (
+                    <span style={{ marginLeft: '12px', fontSize: '13px', color: '#555', fontWeight: 600 }}>
+                      [Study Complete]
+                    </span>
+                  )}
                 </p>
 
                 {study.status === 'Draft' && (
@@ -132,6 +139,11 @@ function StudyHome() {
                 {study.status === 'Generated' && (
                   <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
                     Randomization sequence loaded — review records below or re-upload CSV to replace
+                  </span>
+                )}
+                {study.status === 'Complete' && (
+                  <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
+                    All sequence records have been assigned — study is complete
                   </span>
                 )}
               </div>
@@ -210,9 +222,11 @@ function StudyHome() {
                           <tr>
                             <th>Site</th>
                             <th>Strata</th>
+                            <th>{INVESTIGATOR_LABEL}s</th>
                             <th>Total Records</th>
                             <th>Assigned</th>
                             <th>Unassigned</th>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -220,9 +234,19 @@ function StudyHome() {
                             <tr key={site.id}>
                               <td style={{ fontWeight: 600 }}>{site.name}</td>
                               <td>{site.strata_count}</td>
+                              <td>{site.investigator_count ?? 0}</td>
                               <td>{site.total_records}</td>
                               <td>{site.assigned}</td>
                               <td>{site.unassigned}</td>
+                              <td>
+                                <Link
+                                  to={`/organizer/studies/${studyId}/sites/${site.id}/investigators`}
+                                  className="btn-secondary"
+                                  style={{ textDecoration: 'none', fontSize: '12px', padding: '4px 10px', whiteSpace: 'nowrap' }}
+                                >
+                                  Add Site {INVESTIGATOR_LABEL}
+                                </Link>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -272,7 +296,13 @@ function StudyHome() {
                   <div style={{ padding: '14px 16px', borderBottom: '1px solid #d0d0d0', background: '#f8f9fa', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>Randomized Sequence Records</h2>
-                      <span className="badge badge--active">{study.status === 'Generated' ? 'Generated' : 'Active Study'}</span>
+                      <span className="badge badge--active">
+                        {study.status === 'Generated'
+                          ? 'Generated'
+                          : study.status === 'Complete'
+                            ? 'Complete'
+                            : 'Active Study'}
+                      </span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>

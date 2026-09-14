@@ -11,9 +11,10 @@ const STATUS_LABELS = {
 }
 
 function StudyInvestigators() {
-  const { studyId } = useParams()
+  const { studyId, siteId } = useParams()
   const navigate = useNavigate()
   const [study, setStudy] = useState(null)
+  const [site, setSite] = useState(null)
   const [investigators, setInvestigators] = useState([])
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -27,7 +28,7 @@ function StudyInvestigators() {
   const [pendingAction, setPendingAction] = useState(null) // { type, id, label }
 
   function loadInvestigators() {
-    apiFetch(`/organizer/studies/${studyId}/investigators`)
+    apiFetch(`/organizer/studies/${studyId}/sites/${siteId}/investigators`)
       .then((res) => (res.ok ? res.json() : []))
       .then(setInvestigators)
       .catch(() => {})
@@ -44,25 +45,32 @@ function StudyInvestigators() {
         storeCsrfFromResponse(me)
         return Promise.all([
           apiFetch(`/organizer/studies/${studyId}`),
-          apiFetch(`/organizer/studies/${studyId}/investigators`),
+          apiFetch(`/organizer/studies/${studyId}/sites`),
+          apiFetch(`/organizer/studies/${studyId}/sites/${siteId}/investigators`),
         ])
       })
       .then((result) => {
         if (!result) return
-        const [studyRes, invRes] = result
+        const [studyRes, sitesRes, invRes] = result
         if (!studyRes.ok) {
           navigate('/organizer/home', { replace: true })
           return
         }
-        return Promise.all([studyRes.json(), invRes.ok ? invRes.json() : []])
+        return Promise.all([
+          studyRes.json(),
+          sitesRes.ok ? sitesRes.json() : [],
+          invRes.ok ? invRes.json() : [],
+        ])
       })
       .then((data) => {
         if (!data) return
-        setStudy(data[0])
-        setInvestigators(data[1])
+        const [studyData, sitesData, invData] = data
+        setStudy(studyData)
+        setSite(sitesData.find((s) => String(s.id) === String(siteId)) || null)
+        setInvestigators(invData)
       })
       .catch(() => navigate('/organizer/login', { replace: true }))
-  }, [navigate, studyId])
+  }, [navigate, studyId, siteId])
 
   async function handleCsvUpload(e) {
     const file = e.target.files?.[0]
@@ -83,7 +91,7 @@ function StudyInvestigators() {
 
     try {
       const res = await apiUpload(
-        `/organizer/studies/${studyId}/investigators/bulk`,
+        `/organizer/studies/${studyId}/sites/${siteId}/investigators/bulk`,
         formData
       )
       const data = await res.json()
@@ -110,7 +118,7 @@ function StudyInvestigators() {
     setSubmitting(true)
 
     try {
-      const res = await apiFetch(`/organizer/studies/${studyId}/investigators`, {
+      const res = await apiFetch(`/organizer/studies/${studyId}/sites/${siteId}/investigators`, {
         method: 'POST',
         json: { email: email.trim(), name: name.trim() || null },
       })
@@ -138,7 +146,7 @@ function StudyInvestigators() {
     setActionLoading(investigatorId)
     try {
       const res = await apiFetch(
-        `/organizer/studies/${studyId}/investigators/${investigatorId}/revoke`,
+        `/organizer/studies/${studyId}/sites/${siteId}/investigators/${investigatorId}/revoke`,
         { method: 'PATCH' }
       )
       if (!res.ok) {
@@ -159,7 +167,7 @@ function StudyInvestigators() {
     setActionLoading(investigatorId)
     try {
       const res = await apiFetch(
-        `/organizer/studies/${studyId}/investigators/${investigatorId}/restore`,
+        `/organizer/studies/${studyId}/sites/${siteId}/investigators/${investigatorId}/restore`,
         { method: 'PATCH' }
       )
       if (!res.ok) {
@@ -183,7 +191,7 @@ function StudyInvestigators() {
     setError(null)
     try {
       const res = await apiFetch(
-        `/organizer/studies/${studyId}/investigators/${investigatorId}/reset-password`,
+        `/organizer/studies/${studyId}/sites/${siteId}/investigators/${investigatorId}/reset-password`,
         { method: 'POST' }
       )
       if (!res.ok) {
@@ -218,7 +226,7 @@ function StudyInvestigators() {
           <Link to={`/organizer/studies/${studyId}/home`} className="back-link">
             ← Back to Study
           </Link>
-          <h1>{INVESTIGATOR_LABEL_PLURAL}</h1>
+          <h1>{INVESTIGATOR_LABEL_PLURAL} — {site ? site.name : 'Site'}</h1>
         </div>
 
         {!study ? (
@@ -230,6 +238,11 @@ function StudyInvestigators() {
               <p className="message">
                 <strong>{study.protocol_code}</strong> — {study.title}
               </p>
+              {site && (
+                <p className="message" style={{ marginTop: '8px' }}>
+                  <strong>Site:</strong> {site.name}
+                </p>
+              )}
             </div>
 
             {/* Invite panels */}
@@ -237,10 +250,11 @@ function StudyInvestigators() {
               <div className="setup-card">
                 <div className="setup-card__header">
                   <span className="setup-badge">Single Invite</span>
-                  <h2>Invite one {INVESTIGATOR_LABEL.toLowerCase()}</h2>
+                  <h2>Add site {INVESTIGATOR_LABEL.toLowerCase()}</h2>
                   <p>
                     The system will generate a username and temporary password and send them
-                    to the provided email address.
+                    to the provided email address. This investigator will be linked to{' '}
+                    <strong>{site?.name || 'this site'}</strong>.
                   </p>
                 </div>
 
@@ -269,7 +283,7 @@ function StudyInvestigators() {
                   {error && <p className="error">{error}</p>}
                   {successMsg && <p className="success-msg">{successMsg}</p>}
                   <button type="submit" className="btn-primary" disabled={submitting}>
-                    {submitting ? 'Adding…' : `Add ${INVESTIGATOR_LABEL}`}
+                    {submitting ? 'Adding…' : `Add Site ${INVESTIGATOR_LABEL}`}
                   </button>
                 </form>
               </div>

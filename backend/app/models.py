@@ -112,6 +112,9 @@ class Investigator(Base):
     study_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("studies.id", ondelete="CASCADE"), nullable=False
     )
+    site_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=True
+    )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     # Zero-padded sequential number unique within a study, e.g. "000001"
@@ -125,6 +128,7 @@ class Investigator(Base):
     )
 
     study: Mapped["Study"] = relationship("Study", back_populates="investigators")
+    site: Mapped[Optional["Site"]] = relationship("Site", back_populates="investigators")
 
 
 class Site(Base):
@@ -145,6 +149,9 @@ class Site(Base):
     )
     randomization_records: Mapped[list["RandomizationRecord"]] = relationship(
         "RandomizationRecord", back_populates="site"
+    )
+    investigators: Mapped[list["Investigator"]] = relationship(
+        "Investigator", back_populates="site", cascade="all, delete-orphan"
     )
 
 

@@ -72,6 +72,58 @@ def _get_study_for_organizer(study_id: int, organizer_id: int, db: Session) -> S
     return study
 
 
+def _get_site_for_organizer(
+    study_id: int, site_id: int, organizer_id: int, db: Session
+) -> Site:
+    """Return the site only if it belongs to the organizer's study, else 404."""
+    _get_study_for_organizer(study_id, organizer_id, db)
+    site = (
+        db.query(Site)
+        .filter(Site.id == site_id, Site.study_id == study_id)
+        .first()
+    )
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found.")
+    return site
+
+
+def _investigator_out(investigator: Investigator) -> InvestigatorOut:
+    return InvestigatorOut(
+        id=investigator.id,
+        study_id=investigator.study_id,
+        site_id=investigator.site_id,
+        site_name=investigator.site.name if investigator.site else None,
+        email=investigator.email,
+        name=investigator.name,
+        username=investigator.username,
+        status=investigator.status,
+        created_at=investigator.created_at,
+    )
+
+
+def _get_investigator_for_site(
+    study_id: int,
+    site_id: int,
+    investigator_id: int,
+    organizer_id: int,
+    db: Session,
+) -> Investigator:
+    _get_site_for_organizer(study_id, site_id, organizer_id, db)
+    investigator = (
+        db.query(Investigator)
+        .options(joinedload(Investigator.site))
+        .filter(
+            Investigator.id == investigator_id,
+            Investigator.study_id == study_id,
+            Investigator.site_id == site_id,
+        )
+        .first()
+    )
+    if not investigator:
+        raise HTTPException(status_code=404, detail="Investigator not found.")
+    return investigator
+
+
 def _randomization_record_out(record: RandomizationRecord) -> RandomizationRecordOut:
     inv_username = (
         record.assigned_by_investigator.username
@@ -335,40 +387,50 @@ def set_treatment_arms(
     audit("study.arms.updated", study_id=study_id, count=len(new_arms), organizer=current_organizer.username)
     return new_arms
 
-@router.get("/studies/{study_id}/investigators", response_model=list[InvestigatorOut])
-def list_investigators(
+@router.get(
+    "/studies/{study_id}/sites/{site_id}/investigators",
+    response_model=list[InvestigatorOut],
+)
+def list_site_investigators(
     study_id: int,
+    site_id: int,
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
-    """Return all investigators for the given study."""
-    _get_study_for_organizer(study_id, current_organizer.id, db)
-    return (
+    """Return all investigators for the given site."""
+    _get_site_for_organizer(study_id, site_id, current_organizer.id, db)
+    investigators = (
         db.query(Investigator)
-        .filter(Investigator.study_id == study_id)
+        .options(joinedload(Investigator.site))
+        .filter(Investigator.site_id == site_id)
         .order_by(Investigator.created_at.desc())
         .all()
     )
+    return [_investigator_out(inv) for inv in investigators]
 
 
-@router.post("/studies/{study_id}/investigators", response_model=InvestigatorOut, status_code=201)
+@router.post(
+    "/studies/{study_id}/sites/{site_id}/investigators",
+    response_model=InvestigatorOut,
+    status_code=201,
+)
 @limiter.limit("20/hour")
-def invite_investigator(
+def invite_site_investigator(
     request: Request,
     study_id: int,
+    site_id: int,
     payload: InviteInvestigatorRequest,
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
-    """
-    Create an investigator record for this study with system-generated credentials
-    and send the credentials to the provided email address.
-    """
+    """Create a site investigator and email system-generated credentials."""
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
+    site = _get_site_for_organizer(study_id, site_id, current_organizer.id, db)
 
     try:
         investigator = create_and_send_investigator_invite(
             study=study,
+            site=site,
             email=payload.email,
             name=payload.name.strip() if payload.name else None,
             db=db,
@@ -381,36 +443,45 @@ def invite_investigator(
 
     db.commit()
     db.refresh(investigator)
+    investigator = (
+        db.query(Investigator)
+        .options(joinedload(Investigator.site))
+        .filter(Investigator.id == investigator.id)
+        .first()
+    )
     audit(
         "investigator.invited",
         investigator_id=investigator.id,
         study_id=study_id,
+        site_id=site_id,
         email=investigator.email,
         username=investigator.username,
         organizer=current_organizer.username,
         ip=request.client.host if request.client else None,
         email_configured=email_is_configured(),
     )
-    return investigator
+    return _investigator_out(investigator)
 
 
 @router.post(
-    "/studies/{study_id}/investigators/bulk",
+    "/studies/{study_id}/sites/{site_id}/investigators/bulk",
     response_model=BulkInviteResponse,
 )
 @limiter.limit("10/hour")
-async def bulk_invite_investigators(
+async def bulk_invite_site_investigators(
     request: Request,
     study_id: int,
+    site_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
-    """Invite multiple investigators from a 2-column CSV (email, name), no header row."""
+    """Invite multiple site investigators from a 2-column CSV (email, name)."""
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Please upload a .csv file.")
 
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
+    site = _get_site_for_organizer(study_id, site_id, current_organizer.id, db)
     content = await read_csv_upload_limited(file)
 
     try:
@@ -441,6 +512,7 @@ async def bulk_invite_investigators(
         try:
             investigator = create_and_send_investigator_invite(
                 study=study,
+                site=site,
                 email=email,
                 name=name,
                 db=db,
@@ -460,6 +532,7 @@ async def bulk_invite_investigators(
                 "investigator.invited",
                 investigator_id=investigator.id,
                 study_id=study_id,
+                site_id=site_id,
                 email=investigator.email,
                 username=investigator.username,
                 organizer=current_organizer.username,
@@ -504,6 +577,7 @@ async def bulk_invite_investigators(
     audit(
         "investigator.bulk_invited",
         study_id=study_id,
+        site_id=site_id,
         organizer=current_organizer.username,
         created_count=created_count,
         skipped_count=skipped_count,
@@ -520,24 +594,20 @@ async def bulk_invite_investigators(
 
 
 @router.patch(
-    "/studies/{study_id}/investigators/{investigator_id}/revoke",
+    "/studies/{study_id}/sites/{site_id}/investigators/{investigator_id}/revoke",
     response_model=InvestigatorOut,
 )
-def revoke_investigator(
+def revoke_site_investigator(
     study_id: int,
+    site_id: int,
     investigator_id: int,
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
-    """Revoke an investigator's access to the study."""
-    _get_study_for_organizer(study_id, current_organizer.id, db)
-    investigator = (
-        db.query(Investigator)
-        .filter(Investigator.id == investigator_id, Investigator.study_id == study_id)
-        .first()
+    """Revoke a site investigator's access."""
+    investigator = _get_investigator_for_site(
+        study_id, site_id, investigator_id, current_organizer.id, db
     )
-    if not investigator:
-        raise HTTPException(status_code=404, detail="Investigator not found.")
     if investigator.status == "revoked":
         raise HTTPException(status_code=409, detail="Investigator access is already revoked.")
 
@@ -549,34 +619,30 @@ def revoke_investigator(
         "investigator.revoked",
         investigator_id=investigator.id,
         study_id=study_id,
+        site_id=site_id,
         organizer=current_organizer.username,
     )
-    return investigator
+    return _investigator_out(investigator)
 
 
 @router.patch(
-    "/studies/{study_id}/investigators/{investigator_id}/restore",
+    "/studies/{study_id}/sites/{site_id}/investigators/{investigator_id}/restore",
     response_model=InvestigatorOut,
 )
-def restore_investigator(
+def restore_site_investigator(
     study_id: int,
+    site_id: int,
     investigator_id: int,
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
-    """Restore a revoked investigator's access to the study."""
-    _get_study_for_organizer(study_id, current_organizer.id, db)
-    investigator = (
-        db.query(Investigator)
-        .filter(Investigator.id == investigator_id, Investigator.study_id == study_id)
-        .first()
+    """Restore a revoked site investigator's access."""
+    investigator = _get_investigator_for_site(
+        study_id, site_id, investigator_id, current_organizer.id, db
     )
-    if not investigator:
-        raise HTTPException(status_code=404, detail="Investigator not found.")
     if investigator.status != "revoked":
         raise HTTPException(status_code=409, detail="Investigator access is not revoked.")
 
-    # inactive until they log in again; login promotes inactive → active
     investigator.status = "inactive"
     bump_investigator_session(investigator)
     db.commit()
@@ -585,35 +651,30 @@ def restore_investigator(
         "investigator.restored",
         investigator_id=investigator.id,
         study_id=study_id,
+        site_id=site_id,
         organizer=current_organizer.username,
     )
-    return investigator
+    return _investigator_out(investigator)
 
 
 @router.post(
-    "/studies/{study_id}/investigators/{investigator_id}/reset-password",
+    "/studies/{study_id}/sites/{site_id}/investigators/{investigator_id}/reset-password",
     response_model=InvestigatorOut,
 )
 @limiter.limit("10/hour")
-def reset_investigator_password(
+def reset_site_investigator_password(
     request: Request,
     study_id: int,
+    site_id: int,
     investigator_id: int,
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
-    """
-    Generate a new random password for the investigator, email it to them,
-    and reset their status to 'inactive' (they must log in again).
-    """
+    """Generate a new password for a site investigator and email it."""
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
-    investigator = (
-        db.query(Investigator)
-        .filter(Investigator.id == investigator_id, Investigator.study_id == study_id)
-        .first()
+    investigator = _get_investigator_for_site(
+        study_id, site_id, investigator_id, current_organizer.id, db
     )
-    if not investigator:
-        raise HTTPException(status_code=404, detail="Investigator not found.")
     if investigator.status == "revoked":
         raise HTTPException(
             status_code=409,
@@ -622,7 +683,6 @@ def reset_investigator_password(
 
     new_password = generate_temp_password()
     investigator.password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
-    # Reset to inactive so the next login is their first effective login
     investigator.status = "inactive"
     bump_investigator_session(investigator)
     db.flush()
@@ -646,12 +706,13 @@ def reset_investigator_password(
         "investigator.password_reset",
         investigator_id=investigator.id,
         study_id=study_id,
+        site_id=site_id,
         email=investigator.email,
         organizer=current_organizer.username,
         ip=request.client.host if request.client else None,
         email_configured=email_is_configured(),
     )
-    return investigator
+    return _investigator_out(investigator)
 
 
 @router.post(
@@ -681,7 +742,7 @@ async def upload_randomization_csv(
     if study.status in CSV_REUPLOAD_BLOCKED_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail="Study is Active and locked. Sequence records cannot be replaced.",
+            detail="Study is locked. Sequence records cannot be replaced.",
         )
 
     content = await read_csv_upload_limited(file)
@@ -756,6 +817,7 @@ def get_study_sites(
     summaries: list[SiteSummaryOut] = []
     for site in sites:
         strata_count = db.query(Strata).filter(Strata.site_id == site.id).count()
+        investigator_count = db.query(Investigator).filter(Investigator.site_id == site.id).count()
         records_query = db.query(RandomizationRecord).filter(
             RandomizationRecord.site_id == site.id
         )
@@ -768,6 +830,7 @@ def get_study_sites(
                 id=site.id,
                 name=site.name,
                 strata_count=strata_count,
+                investigator_count=investigator_count,
                 total_records=total_records,
                 assigned=assigned,
                 unassigned=total_records - assigned,

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
 from ..core.rate_limit import limiter
+from ..core.study_status import ACTIVE, COMPLETE, GENERATED
 from ..core.security import (
     ROLE_INVESTIGATOR,
     bump_investigator_session,
@@ -18,7 +19,7 @@ from ..core.security import (
     revoke_token,
 )
 from ..database import get_db
-from ..models import Investigator, RandomizationRecord, Study
+from ..models import Investigator, RandomizationRecord, Site, Strata, Study
 from ..schemas import (
     AssignKitRequest,
     ChangePasswordRequest,
@@ -27,6 +28,7 @@ from ..schemas import (
     LoginResponse,
     MessageResponse,
     RandomizationRecordOut,
+    StrataAvailabilityOut,
     UnblindResponse,
 )
 
@@ -152,6 +154,9 @@ def get_me(
     db: Session = Depends(get_db),
 ):
     study = db.query(Study).filter(Study.id == current_investigator.study_id).first()
+    site = None
+    if current_investigator.site_id:
+        site = db.query(Site).filter(Site.id == current_investigator.site_id).first()
     cookie_max_age = cookie_max_age_for_access_token(investigator_access_token)
     csrf_token = set_csrf_cookie(response, cookie_max_age)
     return InvestigatorInfo(
@@ -160,6 +165,8 @@ def get_me(
         email=current_investigator.email,
         name=current_investigator.name,
         study_id=current_investigator.study_id,
+        site_id=current_investigator.site_id,
+        site_name=site.name if site else None,
         trial_id=study.protocol_code if study else "",
         study_title=study.title if study else None,
         study_description=study.description if study else None,
@@ -207,6 +214,44 @@ def change_password(
     return LoginResponse(message="Password changed successfully.", csrf_token=csrf_token)
 
 
+@router.get("/strata-availability", response_model=list[StrataAvailabilityOut])
+def get_strata_availability(
+    db: Session = Depends(get_db),
+    current_investigator: Investigator = Depends(get_current_investigator),
+):
+    """Unassigned randomization counts per stratum at the investigator's site."""
+    if current_investigator.site_id is None:
+        return []
+
+    stratas = (
+        db.query(Strata)
+        .filter(Strata.site_id == current_investigator.site_id)
+        .order_by(Strata.name.asc())
+        .all()
+    )
+
+    availability: list[StrataAvailabilityOut] = []
+    for strata in stratas:
+        unassigned_count = (
+            db.query(RandomizationRecord)
+            .filter(
+                RandomizationRecord.site_id == current_investigator.site_id,
+                RandomizationRecord.strata_id == strata.id,
+                RandomizationRecord.assigned_patient_id.is_(None),
+            )
+            .count()
+        )
+        availability.append(
+            StrataAvailabilityOut(
+                id=strata.id,
+                name=strata.name,
+                unassigned_count=unassigned_count,
+            )
+        )
+
+    return availability
+
+
 @router.post("/assign-kit", response_model=RandomizationRecordOut)
 @limiter.limit("30/minute")
 def assign_kit(
@@ -220,64 +265,119 @@ def assign_kit(
         raise HTTPException(status_code=400, detail="Patient ID is required.")
 
     study_id = current_investigator.study_id
+    if current_investigator.site_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Your account is not linked to a site. Contact the study coordinator.",
+        )
 
     study = db.query(Study).filter(Study.id == study_id).first()
     if not study:
         raise HTTPException(status_code=404, detail="Study not found.")
 
-    # Check if patient_id is already assigned in this study
-    existing = (
-        db.query(RandomizationRecord)
+    strata = (
+        db.query(Strata)
         .filter(
-            RandomizationRecord.study_id == study_id,
-            func.lower(RandomizationRecord.assigned_patient_id) == patient_id.lower(),
+            Strata.id == payload.strata_id,
+            Strata.site_id == current_investigator.site_id,
+            Strata.study_id == study_id,
         )
         .first()
     )
-    if existing:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Patient ID '{patient_id}' has already been assigned a kit code in this study.",
-        )
-
-    # Get next unassigned record (lock row to prevent concurrent assignment)
-    record = (
-        db.query(RandomizationRecord)
-        .filter(
-            RandomizationRecord.study_id == study_id,
-            RandomizationRecord.assigned_patient_id.is_(None),
-        )
-        .order_by(RandomizationRecord.sequence_number.asc())
-        .with_for_update(skip_locked=True)
-        .first()
-    )
-    if not record:
+    if not strata:
         raise HTTPException(
             status_code=400,
-            detail="No unassigned kit codes remaining for this study.",
+            detail="Invalid stratum selection for your site.",
         )
 
-    record.assigned_patient_id = patient_id
-    record.assigned_by_investigator_id = current_investigator.id
-    record.assigned_at = datetime.now(timezone.utc)
-
     try:
+        existing = (
+            db.query(RandomizationRecord)
+            .filter(
+                RandomizationRecord.study_id == study_id,
+                func.lower(RandomizationRecord.assigned_patient_id) == patient_id.lower(),
+            )
+            .with_for_update()
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Patient ID '{patient_id}' has already been assigned a kit code in this study.",
+            )
+
+        record = (
+            db.query(RandomizationRecord)
+            .filter(
+                RandomizationRecord.study_id == study_id,
+                RandomizationRecord.site_id == current_investigator.site_id,
+                RandomizationRecord.strata_id == payload.strata_id,
+                RandomizationRecord.assigned_patient_id.is_(None),
+            )
+            .order_by(RandomizationRecord.sequence_number.asc())
+            .with_for_update()
+            .first()
+        )
+        if not record:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"No unassigned kit codes remaining for stratum "
+                    f"'{strata.name}' at this site."
+                ),
+            )
+
+        record.assigned_patient_id = patient_id
+        record.assigned_by_investigator_id = current_investigator.id
+        record.assigned_at = datetime.now(timezone.utc)
+
+        if study.status == GENERATED:
+            study.status = ACTIVE
+
+        # Session uses autoflush=False — flush so the count sees this assignment.
+        db.flush()
+
+        remaining_unassigned = (
+            db.query(RandomizationRecord)
+            .filter(
+                RandomizationRecord.study_id == study_id,
+                RandomizationRecord.assigned_patient_id.is_(None),
+            )
+            .count()
+        )
+        if remaining_unassigned == 0 and study.status == ACTIVE:
+            study.status = COMPLETE
+
         db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=409,
             detail=f"Patient ID '{patient_id}' has already been assigned a kit code in this study.",
         ) from None
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred while assigning the kit code.",
+        )
+
     db.refresh(record)
+    db.refresh(study)
 
     audit(
         "investigator.kit_assigned",
         investigator_id=current_investigator.id,
         study_id=study_id,
+        site_id=current_investigator.site_id,
+        strata_id=payload.strata_id,
         patient_id=patient_id,
         kit_code=record.kit_code,
         sequence_number=record.sequence_number,
+        study_status=study.status,
         ip=request.client.host if request.client else None,
     )
 

@@ -264,6 +264,8 @@ class InviteInvestigatorRequest(BaseModel):
 class InvestigatorOut(BaseModel):
     id: int
     study_id: int
+    site_id: Optional[int] = None
+    site_name: Optional[str] = None
     email: str
     name: Optional[str] = None
     username: str
@@ -294,6 +296,8 @@ class InvestigatorInfo(BaseModel):
     email: str
     name: Optional[str] = None
     study_id: int
+    site_id: Optional[int] = None
+    site_name: Optional[str] = None
     trial_id: str
     study_title: Optional[str] = None
     study_description: Optional[str] = None
@@ -348,6 +352,7 @@ class SiteSummaryOut(BaseModel):
     id: int
     name: str
     strata_count: int
+    investigator_count: int
     total_records: int
     assigned: int
     unassigned: int
@@ -374,6 +379,13 @@ class CsvUploadResponse(BaseModel):
 
 class AssignKitRequest(BaseModel):
     patient_id: str
+    strata_id: int
+
+
+class StrataAvailabilityOut(BaseModel):
+    id: int
+    name: str
+    unassigned_count: int
 
 
 class UnblindResponse(BaseModel):

@@ -7,7 +7,7 @@ import io
 import bcrypt
 from sqlalchemy.orm import Session
 
-from ..models import Investigator, Study
+from ..models import Investigator, Site, Study
 from .email import send_investigator_credentials
 from .investigators import generate_temp_password, generate_username
 from .csv_limits import ensure_csv_size
@@ -19,7 +19,9 @@ MAX_BULK_ROWS = 100
 class DuplicateInvestigatorError(Exception):
     def __init__(self, email: str):
         self.email = email
-        super().__init__(f"An active investigator with email '{email}' already exists in this study.")
+        super().__init__(
+            f"An active investigator with email '{email}' already exists at this site."
+        )
 
 
 def parse_investigator_csv(content: bytes) -> list[tuple[int, str | None, str]]:
@@ -65,11 +67,11 @@ def parse_investigator_csv(content: bytes) -> list[tuple[int, str | None, str]]:
     return rows
 
 
-def active_investigator_exists(study_id: int, email: str, db: Session) -> bool:
+def active_investigator_exists(site_id: int, email: str, db: Session) -> bool:
     return (
         db.query(Investigator)
         .filter(
-            Investigator.study_id == study_id,
+            Investigator.site_id == site_id,
             Investigator.email == email,
             Investigator.status != "revoked",
         )
@@ -81,15 +83,19 @@ def active_investigator_exists(study_id: int, email: str, db: Session) -> bool:
 def create_and_send_investigator_invite(
     *,
     study: Study,
+    site: Site,
     email: str,
     name: str | None,
     db: Session,
 ) -> Investigator:
     """
-    Create an investigator, send credential email, and flush to DB.
+    Create a site investigator, send credential email, and flush to DB.
     Caller is responsible for commit/rollback.
     """
-    if active_investigator_exists(study.id, email, db):
+    if site.study_id != study.id:
+        raise ValueError("Site does not belong to this study.")
+
+    if active_investigator_exists(site.id, email, db):
         raise DuplicateInvestigatorError(email)
 
     username = generate_username(study.id, db)
@@ -98,6 +104,7 @@ def create_and_send_investigator_invite(
 
     investigator = Investigator(
         study_id=study.id,
+        site_id=site.id,
         email=email,
         name=name,
         username=username,

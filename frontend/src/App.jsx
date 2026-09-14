@@ -89,7 +89,7 @@ function App() {
         }
       />
       <Route
-        path="/organizer/studies/:studyId/investigators"
+        path="/organizer/studies/:studyId/sites/:siteId/investigators"
         element={
           <OrganizerProtectedRoute>
             <StudyInvestigators />

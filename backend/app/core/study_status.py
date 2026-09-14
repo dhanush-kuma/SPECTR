@@ -3,9 +3,10 @@
 DRAFT = "Draft"
 GENERATED = "Generated"
 ACTIVE = "Active"
+COMPLETE = "Complete"
 
 # Studies with randomization that must not be edited via arms/settings UI.
-LOCKED_STATUSES = frozenset({GENERATED, ACTIVE})
+LOCKED_STATUSES = frozenset({GENERATED, ACTIVE, COMPLETE})
 
-# Only Active studies cannot replace CSV data (live trial).
-CSV_REUPLOAD_BLOCKED_STATUSES = frozenset({ACTIVE})
+# Live or finished trials cannot replace CSV data.
+CSV_REUPLOAD_BLOCKED_STATUSES = frozenset({ACTIVE, COMPLETE})

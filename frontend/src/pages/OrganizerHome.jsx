@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
-import { ORGANIZER_LABEL, INVESTIGATOR_LABEL_PLURAL } from '../labels'
+import { ORGANIZER_LABEL } from '../labels'
 
 function OrganizerHome() {
   const navigate = useNavigate()
@@ -140,9 +140,9 @@ function OrganizerHome() {
                       <td>
                         <span
                           className={`badge badge--${
-                            study.status === 'Active'
-                              ? 'active'
-                              : 'inactive'
+                            study.status === 'Draft'
+                              ? 'inactive'
+                              : 'active'
                           }`}
                         >
                           {study.status}
@@ -156,13 +156,6 @@ function OrganizerHome() {
                             style={{ textDecoration: 'none', fontSize: '12px', padding: '4px 10px' }}
                           >
                             View Study
-                          </Link>
-                          <Link
-                            to={`/organizer/studies/${study.id}/investigators`}
-                            className="btn-secondary"
-                            style={{ textDecoration: 'none', fontSize: '12px', padding: '4px 10px' }}
-                          >
-                            {INVESTIGATOR_LABEL_PLURAL}
                           </Link>
                         </div>
                       </td>

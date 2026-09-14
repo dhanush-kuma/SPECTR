@@ -166,9 +166,9 @@ function UploadCSV() {
           <p className="loading">Loading study...</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '760px' }}>
-            {(study.status === 'Active') && (
+            {(study.status === 'Active' || study.status === 'Complete') && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '12px 16px', color: '#991b1b', fontSize: '14px' }}>
-                <strong>Study is Active and locked.</strong> Sequence records cannot be replaced.
+                <strong>Study is locked.</strong> Sequence records cannot be replaced.
               </div>
             )}
 
@@ -240,7 +240,7 @@ function UploadCSV() {
             </div>
 
             {/* ── Upload card ────────────────────────────────────── */}
-            {!result && study.status !== 'Active' && (
+            {!result && study.status !== 'Active' && study.status !== 'Complete' && (
               <div className="setup-card">
                 <div className="setup-card__header">
                   <span className="setup-badge">Upload</span>

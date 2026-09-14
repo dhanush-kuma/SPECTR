@@ -13,10 +13,29 @@ function InvestigatorHome() {
 
   // Patient randomization form state
   const [patientId, setPatientId] = useState('')
+  const [strataOptions, setStrataOptions] = useState([])
+  const [selectedStrataId, setSelectedStrataId] = useState('')
   const [assignedRecord, setAssignedRecord] = useState(null)
   const [assignedList, setAssignedList] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  function loadStrataAvailability() {
+    return apiFetch('/investigator/strata-availability')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!Array.isArray(data)) return
+        setStrataOptions(data)
+        setSelectedStrataId((current) => {
+          if (current && data.some((s) => String(s.id) === String(current) && s.unassigned_count > 0)) {
+            return current
+          }
+          const firstAvailable = data.find((s) => s.unassigned_count > 0)
+          return firstAvailable ? String(firstAvailable.id) : ''
+        })
+      })
+      .catch(() => setStrataOptions([]))
+  }
 
   // Emergency unblinding state
   const [unblindedRecords, setUnblindedRecords] = useState({})
@@ -49,6 +68,7 @@ function InvestigatorHome() {
           storeCsrfFromResponse(data)
           setInvestigator(data)
           loadAssignments()
+          loadStrataAvailability()
         }
       })
       .catch(() => navigate('/investigator/login', { replace: true }))
@@ -82,12 +102,26 @@ function InvestigatorHome() {
       return
     }
 
+    if (!selectedStrataId) {
+      setError('Please select a stratum with available kit codes.')
+      return
+    }
+
+    const selectedStrata = strataOptions.find((s) => String(s.id) === String(selectedStrataId))
+    if (!selectedStrata || selectedStrata.unassigned_count <= 0) {
+      setError('No unassigned kit codes remain for the selected stratum.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
       const res = await apiFetch('/investigator/assign-kit', {
         method: 'POST',
-        json: { patient_id: trimmed },
+        json: {
+          patient_id: trimmed,
+          strata_id: parseInt(selectedStrataId, 10),
+        },
       })
       const data = await res.json()
 
@@ -99,6 +133,7 @@ function InvestigatorHome() {
       setAssignedRecord(data)
       setPatientId('')
       loadAssignments()
+      loadStrataAvailability()
     } catch {
       setError('Could not connect to backend.')
     } finally {
@@ -147,6 +182,12 @@ function InvestigatorHome() {
   }
 
   const isDoubleBlind = investigator?.blinding_type === 'Double-Blind'
+  const selectedStrata = strataOptions.find((s) => String(s.id) === String(selectedStrataId))
+  const canAssign = Boolean(
+    patientId.trim()
+    && selectedStrata
+    && selectedStrata.unassigned_count > 0
+  )
 
   return (
     <>
@@ -191,6 +232,11 @@ function InvestigatorHome() {
                 Logged in as <strong>{investigator.name || investigator.username}</strong>
                 {' '}· Trial ID: <strong>{investigator.trial_id}</strong>
                 {' '}· Username: <code>{investigator.username}</code>
+                {investigator.site_name && (
+                  <>
+                    {' '}· Site: <strong>{investigator.site_name}</strong>
+                  </>
+                )}
               </p>
             </div>
 
@@ -199,18 +245,21 @@ function InvestigatorHome() {
               <div className="setup-card__header">
                 <span className="setup-badge">Randomization & Kit Assignment</span>
                 <h2 style={{ marginTop: '8px' }}>Assign Kit Code for Patient</h2>
-                <p>Enter the Patient ID to randomize subject and assign the next sequence kit code.</p>
+                <p>Enter the Patient ID and stratum to assign the next available kit code at your site.</p>
               </div>
 
               <form className="setup-form" onSubmit={handleAssignKit} noValidate>
                 {error && <p className="error">{error}</p>}
 
                 {assignedRecord && (
-                  <div className="success-msg">Kit code assigned.</div>
+                  <div className="success-msg">
+                    Kit code <code>{assignedRecord.kit_code}</code> assigned to patient{' '}
+                    <strong>{assignedRecord.assigned_patient_id}</strong>.
+                  </div>
                 )}
 
                 <div className="form-grid">
-                  <div className="field field-full">
+                  <div className="field">
                     <label htmlFor="patient-id">Patient ID / Subject ID *</label>
                     <input
                       id="patient-id"
@@ -220,6 +269,43 @@ function InvestigatorHome() {
                       placeholder="e.g. PAT-1001"
                       required
                     />
+                  </div>
+
+                  <div className="field">
+                    <label htmlFor="strata-select">Stratum *</label>
+                    <select
+                      id="strata-select"
+                      className="select-input"
+                      value={selectedStrataId}
+                      onChange={(e) => setSelectedStrataId(e.target.value)}
+                      disabled={strataOptions.length === 0}
+                      required
+                    >
+                      <option value="">
+                        {strataOptions.length === 0
+                          ? 'No strata available'
+                          : 'Select stratum'}
+                      </option>
+                      {strataOptions.map((strata) => (
+                        <option
+                          key={strata.id}
+                          value={strata.id}
+                          disabled={strata.unassigned_count <= 0}
+                        >
+                          {strata.name} ({strata.unassigned_count} available)
+                        </option>
+                      ))}
+                    </select>
+                    <span className="field-hint">
+                      {selectedStrata
+                        ? selectedStrata.unassigned_count > 0
+                          ? `${selectedStrata.unassigned_count} unassigned kit code(s) remain for this stratum at your site.`
+                          : 'No unassigned kit codes remain for this stratum.'
+                        : 'Choose a stratum to unlock kit assignment.'}
+                    </span>
+                  </div>
+
+                  <div className="field field-full">
                     <span className="field-hint">
                       Note: Patient ID must be unique within the study to maintain auditability and support emergency unblinding if required.
                     </span>
@@ -231,7 +317,7 @@ function InvestigatorHome() {
                     id="btn-assign-kit"
                     type="submit"
                     className="btn-primary"
-                    disabled={submitting || !patientId.trim()}
+                    disabled={submitting || !canAssign}
                   >
                     {submitting ? 'Assigning Kit Code…' : 'Assign Kit Code'}
                   </button>
