@@ -8,23 +8,64 @@
   margin-bottom: 32px;
 }
 
-.app-header .header-left {
+.app-header .header-right {
   display: flex;
   align-items: center;
-  gap: 28px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-left: auto;
+  flex: 1;
+  min-width: 0;
 }
 
 .app-header .site-name {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   font-size: 17px;
   font-weight: 600;
   color: #1a1a2e;
-  letter-spacing: 0;
   text-decoration: none;
+  line-height: 1;
+}
+
+.app-header .site-name__brand {
+  font-family: 'Barlow Semi Condensed', 'Segoe UI', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: #141428;
+  text-transform: uppercase;
+}
+
+.app-header .site-name__tagline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  padding-left: 0.12em;
+}
+
+.app-header .site-name__by {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #6b6b7a;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.app-header .site-name__org {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #c9a227;
 }
 
 .nav-menu {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
 }

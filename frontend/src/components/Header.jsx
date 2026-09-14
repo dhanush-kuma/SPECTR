@@ -4,10 +4,14 @@ import { ORGANIZER_LABEL, INVESTIGATOR_LABEL } from '../labels'
 function Header({ children }) {
   return (
     <header className="app-header">
-      <div className="header-left">
-        <NavLink to="/" className="site-name">
-          Study Randomizer
-        </NavLink>
+      <NavLink to="/" className="site-name">
+        <span className="site-name__brand">SPECTR</span>
+        <span className="site-name__tagline">
+          <span className="site-name__by">by</span>
+          <span className="site-name__org">MMMR</span>
+        </span>
+      </NavLink>
+      <div className="header-right">
         <nav className="nav-menu">
           <NavLink
             to="/"
@@ -35,8 +39,8 @@ function Header({ children }) {
             Study Investigator (SI)
           </NavLink>
         </nav>
+        {children}
       </div>
-      {children}
     </header>
   )
 }
