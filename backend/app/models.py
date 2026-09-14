@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -72,6 +72,12 @@ class Study(Base):
     randomization_records: Mapped[list["RandomizationRecord"]] = relationship(
         "RandomizationRecord", back_populates="study", cascade="all, delete-orphan"
     )
+    sites: Mapped[list["Site"]] = relationship(
+        "Site", back_populates="study", cascade="all, delete-orphan"
+    )
+    stratas: Mapped[list["Strata"]] = relationship(
+        "Strata", back_populates="study", cascade="all, delete-orphan"
+    )
 
 
 class RevokedToken(Base):
@@ -121,6 +127,49 @@ class Investigator(Base):
     study: Mapped["Study"] = relationship("Study", back_populates="investigators")
 
 
+class Site(Base):
+    __tablename__ = "sites"
+    __table_args__ = (
+        UniqueConstraint("study_id", "name", name="uq_sites_study_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    study_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("studies.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    study: Mapped["Study"] = relationship("Study", back_populates="sites")
+    stratas: Mapped[list["Strata"]] = relationship(
+        "Strata", back_populates="site", cascade="all, delete-orphan"
+    )
+    randomization_records: Mapped[list["RandomizationRecord"]] = relationship(
+        "RandomizationRecord", back_populates="site"
+    )
+
+
+class Strata(Base):
+    __tablename__ = "stratas"
+    __table_args__ = (
+        UniqueConstraint("site_id", "name", name="uq_stratas_site_name"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    study_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("studies.id", ondelete="CASCADE"), nullable=False
+    )
+    site_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    study: Mapped["Study"] = relationship("Study", back_populates="stratas")
+    site: Mapped["Site"] = relationship("Site", back_populates="stratas")
+    randomization_records: Mapped[list["RandomizationRecord"]] = relationship(
+        "RandomizationRecord", back_populates="strata"
+    )
+
+
 class RandomizationRecord(Base):
     __tablename__ = "randomization_records"
 
@@ -139,6 +188,14 @@ class RandomizationRecord(Base):
         DateTime(timezone=True), nullable=True
     )
     blind: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    site_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("sites.id", ondelete="SET NULL"), nullable=True
+    )
+    strata_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("stratas.id", ondelete="SET NULL"), nullable=True
+    )
 
     study: Mapped["Study"] = relationship("Study", back_populates="randomization_records")
     assigned_by_investigator: Mapped[Optional["Investigator"]] = relationship("Investigator")
+    site: Mapped[Optional["Site"]] = relationship("Site", back_populates="randomization_records")
+    strata: Mapped[Optional["Strata"]] = relationship("Strata", back_populates="randomization_records")

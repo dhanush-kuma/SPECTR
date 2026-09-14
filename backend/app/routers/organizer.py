@@ -15,6 +15,7 @@ from ..core.investigator_invite import (
     parse_investigator_csv,
 )
 from ..core.csv_limits import read_csv_upload_limited
+from ..core.csv_randomization import persist_csv_randomization
 from ..core.randomization_csv import parse_randomization_csv
 from ..core.randomization_engine import generate_sequence
 from ..core.investigators import generate_temp_password
@@ -67,6 +68,30 @@ def _get_study_for_organizer(study_id: int, organizer_id: int, db: Session) -> S
     if not study:
         raise HTTPException(status_code=404, detail="Study not found.")
     return study
+
+
+def _randomization_record_out(record: RandomizationRecord) -> RandomizationRecordOut:
+    inv_username = (
+        record.assigned_by_investigator.username
+        if record.assigned_by_investigator
+        else None
+    )
+    return RandomizationRecordOut(
+        id=record.id,
+        study_id=record.study_id,
+        sequence_number=record.sequence_number,
+        kit_code=record.kit_code,
+        treatment_name=record.treatment_name,
+        assigned_patient_id=record.assigned_patient_id,
+        assigned_by_investigator_id=record.assigned_by_investigator_id,
+        assigned_by_investigator_username=inv_username,
+        assigned_at=record.assigned_at,
+        blind=record.blind,
+        site_id=record.site_id,
+        strata_id=record.strata_id,
+        site_name=record.site.name if record.site else None,
+        strata_name=record.strata.name if record.strata else None,
+    )
 
 
 def _ensure_protocol_code_available(
@@ -641,10 +666,10 @@ async def upload_randomization_csv(
 ):
     """
     Upload a pre-randomized CSV sequence.  Replaces any existing
-    randomization_records for the study and sets its status to 'Active'.
+    randomization_records, sites, and stratas for the study and sets its
+    status to 'Active'.
 
-    Required CSV columns: sequence_number, kit_code, short_code
-    Optional column:      treatment_arm  (display name; falls back to short_code)
+    Required CSV columns: sequence_number, kit_code, site, strat, treatment_arm
     """
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Please upload a .csv file.")
@@ -663,27 +688,12 @@ async def upload_randomization_csv(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    # Replace all existing randomization records for this study
-    db.query(RandomizationRecord).filter(
-        RandomizationRecord.study_id == study_id
-    ).delete()
-
-    new_records: list[RandomizationRecord] = []
-    for row in parsed_rows:
-        record = RandomizationRecord(
-            study_id=study_id,
-            sequence_number=row["sequence_number"],
-            kit_code=row["kit_code"],
-            treatment_name=row["treatment_name"],
-        )
-        db.add(record)
-        new_records.append(record)
-
-    # Mark the study as active and note it was populated via CSV
-    study.status = "Active"
-    study.random_seed = "csv-upload"
-
     try:
+        new_records = persist_csv_randomization(db, study_id, parsed_rows)
+
+        study.status = "Active"
+        study.random_seed = "csv-upload"
+
         db.commit()
     except Exception:
         db.rollback()
@@ -703,10 +713,22 @@ async def upload_randomization_csv(
         ip=request.client.host if request.client else None,
     )
 
+    records_with_relations = (
+        db.query(RandomizationRecord)
+        .options(
+            joinedload(RandomizationRecord.site),
+            joinedload(RandomizationRecord.strata),
+            joinedload(RandomizationRecord.assigned_by_investigator),
+        )
+        .filter(RandomizationRecord.id.in_([record.id for record in new_records]))
+        .order_by(RandomizationRecord.sequence_number.asc())
+        .all()
+    )
+
     return CsvUploadResponse(
         inserted_count=len(new_records),
         study_status=study.status,
-        records=[RandomizationRecordOut.model_validate(r) for r in new_records],
+        records=[_randomization_record_out(r) for r in records_with_relations],
     )
 
 
@@ -772,30 +794,18 @@ def get_randomization_records(
 
     offset = (page - 1) * per_page
     records = (
-        query.options(joinedload(RandomizationRecord.assigned_by_investigator))
+        query.options(
+            joinedload(RandomizationRecord.assigned_by_investigator),
+            joinedload(RandomizationRecord.site),
+            joinedload(RandomizationRecord.strata),
+        )
         .order_by(RandomizationRecord.sequence_number.asc())
         .offset(offset)
         .limit(per_page)
         .all()
     )
 
-    record_outs = []
-    for r in records:
-        inv_username = r.assigned_by_investigator.username if r.assigned_by_investigator else None
-        record_outs.append(
-            RandomizationRecordOut(
-                id=r.id,
-                study_id=r.study_id,
-                sequence_number=r.sequence_number,
-                kit_code=r.kit_code,
-                treatment_name=r.treatment_name,
-                assigned_patient_id=r.assigned_patient_id,
-                assigned_by_investigator_id=r.assigned_by_investigator_id,
-                assigned_by_investigator_username=inv_username,
-                assigned_at=r.assigned_at,
-                blind=r.blind,
-            )
-        )
+    record_outs = [_randomization_record_out(r) for r in records]
 
     total_pages = math.ceil(total_count / per_page) if total_count > 0 else 1
 

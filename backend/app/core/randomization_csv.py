@@ -3,9 +3,9 @@ Parse a pre-randomized sequence CSV and return validated rows.
 
 Expected columns (case-insensitive, leading/trailing whitespace stripped):
     sequence_number  – positive integer, unique within the file
-    kit_code         – the treatment kit identifier (same value repeats for
-                       all rows belonging to the same treatment arm, e.g.
-                       "KIT-DA" for every Drug A row)
+    kit_code         – unique treatment kit identifier for the row
+    site             – enrolling site name or code
+    strat            – stratum label (column may also be named ``strata``)
     treatment_arm    – display name of the treatment arm (e.g. "Drug A")
 
 Arm validation is intentionally NOT performed here; the caller decides
@@ -21,13 +21,23 @@ from typing import TypedDict
 from .csv_limits import ensure_csv_size
 
 
-REQUIRED_COLUMNS = {"sequence_number", "kit_code", "treatment_arm"}
+REQUIRED_COLUMNS = {"sequence_number", "kit_code", "site", "treatment_arm"}
+STRAT_COLUMN_NAMES = ("strat", "strata")
 
 
 class ParsedRow(TypedDict):
     sequence_number: int
     kit_code: str
+    site: str
+    strat: str
     treatment_name: str
+
+
+def _strat_column_name(normalised_headers: set[str]) -> str | None:
+    for name in STRAT_COLUMN_NAMES:
+        if name in normalised_headers:
+            return name
+    return None
 
 
 def parse_randomization_csv(content: bytes) -> list[ParsedRow]:
@@ -44,7 +54,6 @@ def parse_randomization_csv(content: bytes) -> list[ParsedRow]:
 
     reader = csv.DictReader(io.StringIO(text))
 
-    # Normalise header names: strip whitespace, lowercase
     if reader.fieldnames is None:
         raise ValueError("CSV file appears to be empty or has no header row.")
 
@@ -53,17 +62,22 @@ def parse_randomization_csv(content: bytes) -> list[ParsedRow]:
     if missing:
         raise ValueError(
             f"CSV is missing required column(s): {', '.join(sorted(missing))}. "
-            f"Expected: sequence_number, kit_code, treatment_arm."
+            "Expected: sequence_number, kit_code, site, strat, treatment_arm."
+        )
+
+    strat_column = _strat_column_name(normalised_headers)
+    if strat_column is None:
+        raise ValueError(
+            "CSV is missing required column 'strat' (or 'strata'). "
+            "Expected: sequence_number, kit_code, site, strat, treatment_arm."
         )
 
     rows: list[ParsedRow] = []
     seen_sequence: set[int] = set()
 
     for line_num, raw_row in enumerate(reader, start=2):  # line 1 = header
-        # Normalise keys
         row = {k.strip().lower(): (v.strip() if v else "") for k, v in raw_row.items()}
 
-        # --- sequence_number ---
         seq_str = row.get("sequence_number", "")
         if not seq_str:
             raise ValueError(f"Row {line_num}: 'sequence_number' is empty.")
@@ -83,12 +97,18 @@ def parse_randomization_csv(content: bytes) -> list[ParsedRow]:
             )
         seen_sequence.add(seq)
 
-        # --- kit_code ---
         kit_code = row.get("kit_code", "")
         if not kit_code:
             raise ValueError(f"Row {line_num}: 'kit_code' is empty.")
 
-        # --- treatment_arm ---
+        site = row.get("site", "")
+        if not site:
+            raise ValueError(f"Row {line_num}: 'site' is empty.")
+
+        strat = row.get(strat_column, "")
+        if not strat:
+            raise ValueError(f"Row {line_num}: '{strat_column}' is empty.")
+
         treatment_name = row.get("treatment_arm", "")
         if not treatment_name:
             raise ValueError(f"Row {line_num}: 'treatment_arm' is empty.")
@@ -97,6 +117,8 @@ def parse_randomization_csv(content: bytes) -> list[ParsedRow]:
             ParsedRow(
                 sequence_number=seq,
                 kit_code=kit_code,
+                site=site,
+                strat=strat,
                 treatment_name=treatment_name,
             )
         )

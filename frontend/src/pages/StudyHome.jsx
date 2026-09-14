@@ -121,50 +121,8 @@ function StudyHome() {
                   <h2 className="section-title">Study Setup</h2>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
-                  {/* Treatment Arms */}
-                  <div className="study-form-card" style={{ maxWidth: 'none' }}>
-                    <div className="setup-card__header">
-                      <span className="setup-badge">Arms</span>
-                      <h2 style={{ marginTop: '8px', fontSize: '15px' }}>Treatment Arms</h2>
-                      <p style={{ marginTop: '4px' }}>
-                        Define the treatment arms and allocation ratios for this trial.
-                      </p>
-                    </div>
-                    <div style={{ padding: '16px 20px' }}>
-                      <Link
-                        id="btn-study-arms"
-                        to={`/organizer/studies/${studyId}/arms`}
-                        className="btn-primary"
-                        style={{ textDecoration: 'none' }}
-                      >
-                        Manage Arms
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Randomization */}
-                  <div className="study-form-card" style={{ maxWidth: 'none' }}>
-                    <div className="setup-card__header">
-                      <span className="setup-badge">Randomization</span>
-                      <h2 style={{ marginTop: '8px', fontSize: '15px' }}>Randomization Settings</h2>
-                      <p style={{ marginTop: '4px' }}>
-                        Configure the randomization method, block sizing, and target sample size.
-                      </p>
-                    </div>
-                    <div style={{ padding: '16px 20px' }}>
-                      <Link
-                        id="btn-study-randomization"
-                        to={`/organizer/studies/${studyId}/randomization`}
-                        className="btn-primary"
-                        style={{ textDecoration: 'none' }}
-                      >
-                        Configure
-                      </Link>
-                    </div>
-                  </div>
-
-                  {/* Upload CSV */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginTop: '16px', maxWidth: '400px' }}>
+                  {/* Upload CSV — Arms and Randomization hidden for now */}
                   <div className="study-form-card" style={{ maxWidth: 'none' }}>
                     <div className="setup-card__header">
                       <span className="setup-badge">Data</span>

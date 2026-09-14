@@ -329,6 +329,10 @@ class RandomizationRecordOut(BaseModel):
     assigned_by_investigator_username: Optional[str] = None
     assigned_at: Optional[datetime] = None
     blind: bool = True
+    site_id: Optional[int] = None
+    strata_id: Optional[int] = None
+    site_name: Optional[str] = None
+    strata_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

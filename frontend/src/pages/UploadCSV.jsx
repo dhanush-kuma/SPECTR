@@ -4,19 +4,23 @@ import { apiFetch, apiUpload, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 
 // --- Sample CSV content (embedded so no static file config needed) ---
-const SAMPLE_CSV_CONTENT = `sequence_number,kit_code,treatment_arm
-1,KIT-DA,Drug A
-2,KIT-PBO,Placebo
-3,KIT-PBO,Placebo
-4,KIT-DA,Drug A
-5,KIT-DA,Drug A
-6,KIT-PBO,Placebo
-7,KIT-PBO,Placebo
-8,KIT-DA,Drug A
-9,KIT-DA,Drug A
-10,KIT-PBO,Placebo
-11,KIT-PBO,Placebo
-12,KIT-DA,Drug A
+const SAMPLE_CSV_CONTENT = `sequence_number,kit_code,site,strat,treatment_arm
+1,KIT-001,Site 1 - University Hospital,Stratum A,Drug A
+2,KIT-002,Site 1 - University Hospital,Stratum A,Placebo
+3,KIT-003,Site 1 - University Hospital,Stratum A,Drug A
+4,KIT-004,Site 1 - University Hospital,Stratum A,Placebo
+5,KIT-005,Site 1 - University Hospital,Stratum A,Drug A
+6,KIT-006,Site 1 - University Hospital,Stratum B,Drug A
+7,KIT-007,Site 1 - University Hospital,Stratum B,Placebo
+8,KIT-008,Site 1 - University Hospital,Stratum B,Drug A
+9,KIT-009,Site 1 - University Hospital,Stratum B,Placebo
+10,KIT-010,Site 1 - University Hospital,Stratum B,Drug A
+11,KIT-011,Site 2 - Central Laboratory,Stratum A,Drug A
+12,KIT-012,Site 2 - Central Laboratory,Stratum A,Placebo
+13,KIT-013,Site 2 - Central Laboratory,Stratum A,Drug A
+14,KIT-014,Site 2 - Central Laboratory,Stratum B,Drug A
+15,KIT-015,Site 2 - Central Laboratory,Stratum B,Placebo
+16,KIT-016,Site 2 - Central Laboratory,Stratum B,Drug A
 `
 
 function downloadSampleCsv() {
@@ -178,9 +182,34 @@ function UploadCSV() {
               <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <ul className="csv-instructions">
                   <li>File must be <strong>.csv</strong> with a header row as the first line.</li>
-                  <li>Required columns: <code>sequence_number</code>, <code>kit_code</code>, <code>treatment_arm</code></li>
-                  <li><code>kit_code</code> identifies the treatment kit — the same value repeats for every row in the same arm (e.g. <code>KIT-DA</code> for all Drug A rows).</li>
-                  <li><code>treatment_arm</code> is the display name of the arm (e.g. <em>Drug A</em>, <em>Placebo</em>).</li>
+                  <li>
+                    Required columns (in this order):{' '}
+                    <code>sequence_number</code>, <code>kit_code</code>, <code>site</code>,{' '}
+                    <code>strat</code>, <code>treatment_arm</code>
+                  </li>
+                  <li>
+                    <code>sequence_number</code> — unique positive integer for each randomization slot,
+                    listed in allocation order.
+                  </li>
+                  <li>
+                    <code>kit_code</code> — unique identifier for the treatment kit assigned to that slot
+                    (e.g. <code>KIT-001</code>).
+                  </li>
+                  <li>
+                    <code>site</code> — enrolling site name or code (hospital, clinic, laboratory, etc.).
+                    The same value must appear on every record belonging to that site.
+                  </li>
+                  <li>
+                    <code>strat</code> — stratum label for the participant classification (e.g. age group,
+                    disease stage, or other predefined subgroup). Within each site, the same stratum value
+                    appears on many records according to your allocation plan — for example, Site 1 may
+                    contain 15 records for Stratum A and 20 for Stratum B, and Site 2 would follow the
+                    same stratum structure with its own record counts.
+                  </li>
+                  <li>
+                    <code>treatment_arm</code> — display name of the treatment arm (e.g. <em>Drug A</em>,{' '}
+                    <em>Placebo</em>).
+                  </li>
                   <li>Maximum file size: <strong>1 MB</strong>.</li>
                   <li>Re-uploading <strong>replaces</strong> all existing records for this study.</li>
                   <li>On success, study status is set to <strong>Active</strong>.</li>
@@ -304,6 +333,8 @@ function UploadCSV() {
                       <tr>
                         <th>#</th>
                         <th>Kit Code</th>
+                        <th>Site</th>
+                        <th>Stratum</th>
                         <th>Treatment</th>
                         <th>Status</th>
                       </tr>
@@ -313,6 +344,8 @@ function UploadCSV() {
                         <tr key={rec.id}>
                           <td>{rec.sequence_number}</td>
                           <td><code>{rec.kit_code}</code></td>
+                          <td>{rec.site_name || '—'}</td>
+                          <td>{rec.strata_name || '—'}</td>
                           <td>{rec.treatment_name}</td>
                           <td>
                             <span className="badge badge--inactive">Unassigned</span>

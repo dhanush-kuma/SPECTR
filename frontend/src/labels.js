@@ -3,5 +3,5 @@ export const ORGANIZER_LABEL = 'CTC'
 export const ORGANIZER_LABEL_PLURAL = 'CTCs'
 
 /** User-facing name for the investigator role. Backend identifiers stay "investigator". */
-export const INVESTIGATOR_LABEL = 'SI'
-export const INVESTIGATOR_LABEL_PLURAL = 'SIs'
+export const INVESTIGATOR_LABEL = 'Study Investigator'
+export const INVESTIGATOR_LABEL_PLURAL = 'Study Investigators'
