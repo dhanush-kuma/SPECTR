@@ -1,4 +1,4 @@
-# SPECTR <span style="font-size: 0.45em; font-weight: 400;">: Secure Point-of-care Enrollment and Centralized Trial Randomization</span>
+# SPECTR : Secure Point-of-care Enrollment and Centralized Trial Randomization
 
 A web app for managing clinical study metadata, configuring randomization, and onboarding investigators. Built with **FastAPI** (backend) and **React + Vite** (frontend).
 
