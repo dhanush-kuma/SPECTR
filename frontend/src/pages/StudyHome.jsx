@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { apiFetch } from '../api'
 import Header from '../components/Header'
-import { ORGANIZER_LABEL, INVESTIGATOR_LABEL } from '../labels'
+import { ORGANIZER_LABEL, INVESTIGATOR_LABEL, PARTICIPANT_LABEL, PARTICIPANT_LABEL_PLURAL } from '../labels'
 
 function StudyHome() {
   const { studyId } = useParams()
@@ -190,7 +190,7 @@ function StudyHome() {
                       <div style={{ fontSize: '24px', fontWeight: 600, color: '#1a1a2e', marginTop: '4px' }}>{recordsData.total_count}</div>
                     </div>
                     <div className="status-card" style={{ maxWidth: 'none', margin: 0 }}>
-                      <div className="label">Assigned to Patients</div>
+                      <div className="label">Assigned to {PARTICIPANT_LABEL_PLURAL}</div>
                       <div style={{ fontSize: '24px', fontWeight: 600, color: '#1a1a2e', marginTop: '4px' }}>{recordsData.assigned_count}</div>
                     </div>
                     <div className="status-card" style={{ maxWidth: 'none', margin: 0 }}>
@@ -344,7 +344,7 @@ function StudyHome() {
                       {/* Search Bar */}
                       <input
                         type="text"
-                        placeholder="Search kit, drug, patient..."
+                        placeholder={`Search kit, drug, ${PARTICIPANT_LABEL.toLowerCase()}...`}
                         value={search}
                         onChange={handleSearchChange}
                         className="field input"
@@ -390,7 +390,7 @@ function StudyHome() {
                             <th>Kit Code</th>
                             <th>Treatment Arm</th>
                             <th>Blind Status</th>
-                            <th>Patient ID</th>
+                            <th>{PARTICIPANT_LABEL} ID</th>
                             <th>{INVESTIGATOR_LABEL} ID</th>
                             <th>Assigned Date</th>
                           </tr>

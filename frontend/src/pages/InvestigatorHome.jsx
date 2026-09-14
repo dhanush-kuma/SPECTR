@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
-import { INVESTIGATOR_LABEL } from '../labels'
-import { ORGANIZER_LABEL } from '../labels'
+import { INVESTIGATOR_LABEL, ORGANIZER_LABEL, PARTICIPANT_LABEL } from '../labels'
 
 function InvestigatorHome() {
   const navigate = useNavigate()
@@ -11,7 +10,7 @@ function InvestigatorHome() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState(null)
 
-  // Patient randomization form state
+  // Participant randomization form state
   const [patientId, setPatientId] = useState('')
   const [strataOptions, setStrataOptions] = useState([])
   const [selectedStrataId, setSelectedStrataId] = useState('')
@@ -98,7 +97,7 @@ function InvestigatorHome() {
 
     const trimmed = patientId.trim()
     if (!trimmed) {
-      setError('Please enter a valid Patient ID.')
+      setError(`Please enter a valid ${PARTICIPANT_LABEL} ID.`)
       return
     }
 
@@ -244,8 +243,8 @@ function InvestigatorHome() {
             <div className="study-form-card" style={{ marginTop: '24px' }}>
               <div className="setup-card__header">
                 <span className="setup-badge">Randomization & Kit Assignment</span>
-                <h2 style={{ marginTop: '8px' }}>Assign Kit Code for Patient</h2>
-                <p>Enter the Patient ID and stratum to assign the next available kit code at your site.</p>
+                <h2 style={{ marginTop: '8px' }}>Assign Kit Code for {PARTICIPANT_LABEL}</h2>
+                <p>Enter the {PARTICIPANT_LABEL} ID and stratum to assign the next available kit code at your site.</p>
               </div>
 
               <form className="setup-form" onSubmit={handleAssignKit} noValidate>
@@ -253,16 +252,16 @@ function InvestigatorHome() {
 
                 {assignedRecord && (
                   <div className="success-msg">
-                    Kit code <code>{assignedRecord.kit_code}</code> assigned to patient{' '}
+                    Kit code <code>{assignedRecord.kit_code}</code> assigned to {PARTICIPANT_LABEL.toLowerCase()}{' '}
                     <strong>{assignedRecord.assigned_patient_id}</strong>.
                   </div>
                 )}
 
                 <div className="form-grid">
                   <div className="field">
-                    <label htmlFor="patient-id">Patient ID / Subject ID *</label>
+                    <label htmlFor="participant-id">{PARTICIPANT_LABEL} ID / Subject ID *</label>
                     <input
-                      id="patient-id"
+                      id="participant-id"
                       type="text"
                       value={patientId}
                       onChange={(e) => setPatientId(e.target.value)}
@@ -307,7 +306,7 @@ function InvestigatorHome() {
 
                   <div className="field field-full">
                     <span className="field-hint">
-                      Note: Patient ID must be unique within the study to maintain auditability and support emergency unblinding if required.
+                      Note: {PARTICIPANT_LABEL} ID must be unique within the study to maintain auditability and support emergency unblinding if required.
                     </span>
                   </div>
                 </div>
@@ -329,14 +328,14 @@ function InvestigatorHome() {
             {assignedList.length > 0 && (
               <div style={{ marginTop: '36px' }}>
                 <div className="section-header">
-                  <h2 className="section-title">Assigned Patient Records ({assignedList.length})</h2>
+                  <h2 className="section-title">Assigned {PARTICIPANT_LABEL} Records ({assignedList.length})</h2>
                 </div>
 
                 <table className="data-table">
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Patient ID</th>
+                      <th>{PARTICIPANT_LABEL} ID</th>
                       <th>Kit Code</th>
                       <th>Treatment Arm</th>
                     </tr>
@@ -416,7 +415,7 @@ function InvestigatorHome() {
             </div>
 
             <p style={{ fontSize: '14px', color: '#444', lineHeight: '1.5', margin: '0 0 14px' }}>
-              You are requesting to unblind the treatment arm for Patient <strong>{unblindModalRecord.assigned_patient_id}</strong> (Kit <code>{unblindModalRecord.kit_code}</code>).
+              You are requesting to unblind the treatment arm for {PARTICIPANT_LABEL} <strong>{unblindModalRecord.assigned_patient_id}</strong> (Kit <code>{unblindModalRecord.kit_code}</code>).
             </p>
 
             <p
