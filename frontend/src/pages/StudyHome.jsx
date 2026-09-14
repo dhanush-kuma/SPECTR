@@ -18,6 +18,8 @@ function StudyHome() {
   const [statusFilter, setStatusFilter] = useState('') // '' | 'assigned' | 'unassigned'
   const [recordsData, setRecordsData] = useState(null)
   const [loadingRecords, setLoadingRecords] = useState(false)
+  const [sitesData, setSitesData] = useState([])
+  const [loadingSites, setLoadingSites] = useState(false)
 
   // Fetch Study details
   useEffect(() => {
@@ -35,9 +37,9 @@ function StudyHome() {
       .catch(() => navigate('/organizer/home', { replace: true }))
   }, [studyId, navigate])
 
-  // Fetch Randomized Sequence Records if Study is Active
+  // Fetch Randomized Sequence Records once randomization exists
   useEffect(() => {
-    if (!study || study.status !== 'Active') return
+    if (!study || (study.status !== 'Active' && study.status !== 'Generated')) return
 
     setLoadingRecords(true)
     const params = new URLSearchParams({
@@ -55,6 +57,17 @@ function StudyHome() {
       .catch(() => {})
       .finally(() => setLoadingRecords(false))
   }, [studyId, study, page, perPage, search, statusFilter])
+
+  useEffect(() => {
+    if (!study || (study.status !== 'Active' && study.status !== 'Generated')) return
+
+    setLoadingSites(true)
+    apiFetch(`/organizer/studies/${studyId}/sites`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => { if (Array.isArray(data)) setSitesData(data) })
+      .catch(() => setSitesData([]))
+      .finally(() => setLoadingSites(false))
+  }, [studyId, study])
 
   // Reset page to 1 when search or statusFilter changes
   function handleSearchChange(e) {
@@ -94,7 +107,7 @@ function StudyHome() {
                 <p className="message" style={{ margin: 0 }}>
                   <strong>{study.protocol_code}</strong>
                   {' · '}
-                  <span className={`badge badge--${study.status === 'Active' ? 'active' : 'inactive'}`}>
+                  <span className={`badge badge--${study.status === 'Active' || study.status === 'Generated' ? 'active' : 'inactive'}`}>
                     {study.status}
                   </span>
                   {' · '}
@@ -104,11 +117,21 @@ function StudyHome() {
                       [Setup Locked]
                     </span>
                   )}
+                  {study.status === 'Generated' && (
+                    <span style={{ marginLeft: '12px', fontSize: '13px', color: '#555', fontWeight: 600 }}>
+                      [Randomization Generated]
+                    </span>
+                  )}
                 </p>
 
                 {study.status === 'Draft' && (
                   <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
-                    Draft Mode — Complete setup to activate study
+                    Draft Mode — Complete setup to generate randomization
+                  </span>
+                )}
+                {study.status === 'Generated' && (
+                  <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
+                    Randomization sequence loaded — review records below or re-upload CSV to replace
                   </span>
                 )}
               </div>
@@ -171,6 +194,47 @@ function StudyHome() {
                   </div>
                 )}
 
+                {/* Sites Table */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div className="section-header" style={{ marginBottom: '8px' }}>
+                    <h3 className="section-title" style={{ fontSize: '15px' }}>Sites</h3>
+                  </div>
+                  <div style={{ overflowX: 'auto', border: '1px solid #d0d0d0', borderRadius: '4px' }}>
+                    {loadingSites ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#555', fontSize: '14px' }}>
+                        Loading sites...
+                      </div>
+                    ) : sitesData.length > 0 ? (
+                      <table className="data-table" style={{ margin: 0 }}>
+                        <thead>
+                          <tr>
+                            <th>Site</th>
+                            <th>Strata</th>
+                            <th>Total Records</th>
+                            <th>Assigned</th>
+                            <th>Unassigned</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sitesData.map((site) => (
+                            <tr key={site.id}>
+                              <td style={{ fontWeight: 600 }}>{site.name}</td>
+                              <td>{site.strata_count}</td>
+                              <td>{site.total_records}</td>
+                              <td>{site.assigned}</td>
+                              <td>{site.unassigned}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div style={{ padding: '24px', textAlign: 'center', color: '#555', fontSize: '14px' }}>
+                        No sites configured for this study.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Arm Breakdown Table */}
                 {recordsData && recordsData.arm_counts && recordsData.arm_counts.length > 0 && (
                   <div style={{ marginBottom: '24px' }}>
@@ -208,10 +272,20 @@ function StudyHome() {
                   <div style={{ padding: '14px 16px', borderBottom: '1px solid #d0d0d0', background: '#f8f9fa', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>Randomized Sequence Records</h2>
-                      <span className="badge badge--active">Active Study</span>
+                      <span className="badge badge--active">{study.status === 'Generated' ? 'Generated' : 'Active Study'}</span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      {study.status === 'Generated' && (
+                        <Link
+                          to={`/organizer/studies/${studyId}/upload-csv`}
+                          className="btn-secondary"
+                          style={{ textDecoration: 'none', fontSize: '13px' }}
+                        >
+                          Re-upload CSV
+                        </Link>
+                      )}
+
                       {/* Status Filter Tabs */}
                       <div style={{ display: 'flex', background: '#e0e0e0', borderRadius: '4px', padding: '2px' }}>
                         {['', 'assigned', 'unassigned', 'blinded', 'unblinded'].map((filter) => (

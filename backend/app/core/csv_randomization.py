@@ -16,9 +16,10 @@ def persist_csv_randomization(
     """
     Replace all randomization data for *study_id* from parsed CSV rows.
 
-    Deletes existing randomization records, stratas, and sites for the study,
-    then creates sites from unique CSV site values, stratas unique per site,
-    and randomization records linked to both. Caller must commit the session.
+    Deletes existing randomization records, stratas, and sites for the study
+    (in that order), then creates sites from unique CSV site values, stratas
+    unique per site, and randomization records linked to both. Caller must
+    commit the session.
     """
     db.query(RandomizationRecord).filter(RandomizationRecord.study_id == study_id).delete()
     db.query(Strata).filter(Strata.study_id == study_id).delete()

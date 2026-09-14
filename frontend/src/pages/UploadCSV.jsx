@@ -166,9 +166,16 @@ function UploadCSV() {
           <p className="loading">Loading study...</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '760px' }}>
-            {study.status === 'Active' && (
+            {(study.status === 'Active') && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '12px 16px', color: '#991b1b', fontSize: '14px' }}>
-                <strong>Study is Active and locked.</strong> Sequence records have already been uploaded and finalized. Re-uploading is disabled.
+                <strong>Study is Active and locked.</strong> Sequence records cannot be replaced.
+              </div>
+            )}
+
+            {study.status === 'Generated' && !result && (
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '12px 16px', color: '#1e3a8a', fontSize: '14px' }}>
+                <strong>Generated study.</strong> Uploading a new CSV will replace all existing
+                randomization records, sites, and stratas for this study.
               </div>
             )}
 
@@ -211,8 +218,11 @@ function UploadCSV() {
                     <em>Placebo</em>).
                   </li>
                   <li>Maximum file size: <strong>1 MB</strong>.</li>
-                  <li>Re-uploading <strong>replaces</strong> all existing records for this study.</li>
-                  <li>On success, study status is set to <strong>Active</strong>.</li>
+                  <li>
+                    Re-uploading <strong>replaces</strong> all existing randomization records, sites,
+                    and stratas for this study.
+                  </li>
+                  <li>On success, study status is set to <strong>Generated</strong>.</li>
                 </ul>
 
                 <div>
@@ -235,7 +245,11 @@ function UploadCSV() {
                 <div className="setup-card__header">
                   <span className="setup-badge">Upload</span>
                   <h2 style={{ marginTop: '8px' }}>Select CSV File</h2>
-                  <p>Choose your randomization CSV file to preview and upload.</p>
+                  <p>
+                    {study.status === 'Generated'
+                      ? 'Choose a new CSV file to replace the current randomization data.'
+                      : 'Choose your randomization CSV file to preview and upload.'}
+                  </p>
                 </div>
                 <form className="setup-form" onSubmit={handleUpload} noValidate>
                   {error && <p className="error">{error}</p>}
@@ -297,7 +311,11 @@ function UploadCSV() {
                       className="btn-primary"
                       disabled={!file || uploading}
                     >
-                      {uploading ? 'Uploading...' : 'Upload and Activate Study'}
+                      {uploading
+                        ? 'Uploading...'
+                        : study.status === 'Generated'
+                          ? 'Re-upload and Replace'
+                          : 'Upload and Generate Study'}
                     </button>
                     {file && (
                       <button

@@ -29,8 +29,9 @@ from ..core.security import (
     get_current_organizer,
     revoke_token,
 )
+from ..core.study_status import CSV_REUPLOAD_BLOCKED_STATUSES, GENERATED, LOCKED_STATUSES
 from ..database import get_db
-from ..models import Investigator, Organizer, RandomizationRecord, Study, TreatmentArm
+from ..models import Investigator, Organizer, RandomizationRecord, Site, Strata, Study, TreatmentArm
 from ..schemas import (
     BulkInviteResponse,
     BulkInviteRowResult,
@@ -46,6 +47,7 @@ from ..schemas import (
     OrganizerInfo,
     PaginatedRandomizationRecords,
     RandomizationRecordOut,
+    SiteSummaryOut,
     StudyCreate,
     StudyOut,
     StudyUpdate,
@@ -258,20 +260,20 @@ def update_study(
 ):
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
 
-    if study.status == "Active":
+    if study.status in LOCKED_STATUSES:
         locked_fields = {"randomization_method", "block_size_min", "block_size_max", "target_sample_size"}
         if any(k in payload.model_dump(exclude_unset=True) for k in locked_fields):
             raise HTTPException(
                 status_code=400,
-                detail="Study is Active and locked. Randomization settings cannot be modified.",
+                detail="Study randomization is locked. Randomization settings cannot be modified.",
             )
 
     updates = payload.model_dump(exclude_unset=True)
-    if study.status == "Active":
-        if "status" in updates and updates["status"] != "Active":
+    if study.status in LOCKED_STATUSES:
+        if "status" in updates and updates["status"] != study.status:
             raise HTTPException(
                 status_code=400,
-                detail="Active studies are locked and cannot be downgraded.",
+                detail="Studies with generated randomization are locked and cannot be downgraded.",
             )
         updates.pop("status", None)
     if "protocol_code" in updates and updates["protocol_code"] is not None:
@@ -306,10 +308,10 @@ def set_treatment_arms(
 ):
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
 
-    if study.status == "Active":
+    if study.status in LOCKED_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail="Study is Active and locked. Treatment arms cannot be modified.",
+            detail="Study randomization is locked. Treatment arms cannot be modified.",
         )
 
     # Replace all existing arms
@@ -667,7 +669,7 @@ async def upload_randomization_csv(
     """
     Upload a pre-randomized CSV sequence.  Replaces any existing
     randomization_records, sites, and stratas for the study and sets its
-    status to 'Active'.
+    status to 'Generated'.
 
     Required CSV columns: sequence_number, kit_code, site, strat, treatment_arm
     """
@@ -676,10 +678,10 @@ async def upload_randomization_csv(
 
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
 
-    if study.status == "Active":
+    if study.status in CSV_REUPLOAD_BLOCKED_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail="Study is Active and locked. Sequence records have already been finalized.",
+            detail="Study is Active and locked. Sequence records cannot be replaced.",
         )
 
     content = await read_csv_upload_limited(file)
@@ -691,7 +693,7 @@ async def upload_randomization_csv(
     try:
         new_records = persist_csv_randomization(db, study_id, parsed_rows)
 
-        study.status = "Active"
+        study.status = GENERATED
         study.random_seed = "csv-upload"
 
         db.commit()
@@ -730,6 +732,49 @@ async def upload_randomization_csv(
         study_status=study.status,
         records=[_randomization_record_out(r) for r in records_with_relations],
     )
+
+
+@router.get(
+    "/studies/{study_id}/sites",
+    response_model=list[SiteSummaryOut],
+)
+def get_study_sites(
+    study_id: int,
+    db: Session = Depends(get_db),
+    current_organizer: Organizer = Depends(get_current_organizer),
+):
+    """List enrolling sites for a study with stratum and record counts."""
+    study = _get_study_for_organizer(study_id, current_organizer.id, db)
+
+    sites = (
+        db.query(Site)
+        .filter(Site.study_id == study.id)
+        .order_by(Site.name.asc())
+        .all()
+    )
+
+    summaries: list[SiteSummaryOut] = []
+    for site in sites:
+        strata_count = db.query(Strata).filter(Strata.site_id == site.id).count()
+        records_query = db.query(RandomizationRecord).filter(
+            RandomizationRecord.site_id == site.id
+        )
+        total_records = records_query.count()
+        assigned = records_query.filter(
+            RandomizationRecord.assigned_patient_id.isnot(None)
+        ).count()
+        summaries.append(
+            SiteSummaryOut(
+                id=site.id,
+                name=site.name,
+                strata_count=strata_count,
+                total_records=total_records,
+                assigned=assigned,
+                unassigned=total_records - assigned,
+            )
+        )
+
+    return summaries
 
 
 @router.get(
@@ -870,10 +915,10 @@ def generate_randomization(
     """
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
 
-    if study.status == "Active":
+    if study.status in LOCKED_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail="Study is already Active and locked. Randomization records cannot be regenerated.",
+            detail="Study randomization is already finalized. Randomization records cannot be regenerated.",
         )
 
     # Merge payload overrides with stored study settings

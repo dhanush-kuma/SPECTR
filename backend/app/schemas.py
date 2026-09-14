@@ -344,6 +344,15 @@ class ArmCount(BaseModel):
     unassigned: int
 
 
+class SiteSummaryOut(BaseModel):
+    id: int
+    name: str
+    strata_count: int
+    total_records: int
+    assigned: int
+    unassigned: int
+
+
 class PaginatedRandomizationRecords(BaseModel):
     total_count: int
     page: int
