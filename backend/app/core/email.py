@@ -134,3 +134,38 @@ If you did not expect this email, please contact the study organizer.
 """
 
     send_email(to_email, subject, body)
+
+
+def send_organizer_credentials(
+    to_email: str,
+    temp_password: str,
+    *,
+    is_reset: bool = False,
+) -> None:
+    login_url = f"{FRONTEND_URL.rstrip('/')}/organizer/login"
+
+    if is_reset:
+        subject = "Your new CTC password for Study Randomizer"
+        intro = "A new password was requested for your Central Trial Coordinator (CTC) account on Study Randomizer."
+    else:
+        subject = "Your CTC credentials for Study Randomizer"
+        intro = "You have been invited as a Central Trial Coordinator (CTC) on Study Randomizer."
+
+    body = f"""Hello,
+
+{intro}
+
+Your login credentials:
+  Email    : {to_email}
+  Password : {temp_password}
+
+Login at: {login_url}
+
+You can change your password after logging in.
+
+If you did not request this, please contact your system administrator.
+
+— Study Randomizer
+"""
+
+    send_email(to_email, subject, body)

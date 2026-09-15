@@ -14,6 +14,7 @@ from ..core.investigator_invite import (
     create_and_send_investigator_invite,
     parse_investigator_csv,
 )
+from ..core.organizer_invite import reset_organizer_password
 from ..core.csv_limits import read_csv_upload_limited
 from ..core.csv_randomization import persist_csv_randomization
 from ..core.randomization_csv import parse_randomization_csv
@@ -27,6 +28,7 @@ from ..core.security import (
     cookie_max_age_for_access_token,
     create_access_token,
     get_current_organizer,
+    remember_me_from_access_token,
     revoke_token,
 )
 from ..core.study_status import CSV_REUPLOAD_BLOCKED_STATUSES, GENERATED, LOCKED_STATUSES
@@ -35,7 +37,9 @@ from ..models import Investigator, Organizer, RandomizationRecord, Site, Strata,
 from ..schemas import (
     BulkInviteResponse,
     BulkInviteRowResult,
+    ChangePasswordRequest,
     CsvUploadResponse,
+    ForgotPasswordRequest,
     ArmCount,
     GenerateRandomizationRequest,
     GenerateRandomizationResponse,
@@ -212,6 +216,69 @@ def login(
         ip=request.client.host if request.client else None,
     )
     return LoginResponse(message="Login successful.", csrf_token=csrf_token)
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("5/hour")
+def forgot_password(
+    request: Request,
+    payload: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        sent = reset_organizer_password(email=payload.email, db=db)
+    except RuntimeError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if not sent:
+        raise HTTPException(
+            status_code=404,
+            detail="No account found for that email.",
+        )
+
+    db.commit()
+    audit(
+        "organizer.password_reset_requested",
+        email=payload.email,
+        ip=request.client.host if request.client else None,
+    )
+    return MessageResponse(
+        message=f"A new password has been sent to {payload.email}."
+    )
+
+
+@router.post("/change-password", response_model=LoginResponse)
+@limiter.limit("5/minute")
+def change_password(
+    request: Request,
+    payload: ChangePasswordRequest,
+    response: Response,
+    organizer_access_token: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
+    current_organizer: Organizer = Depends(get_current_organizer),
+):
+    if not bcrypt.checkpw(
+        payload.current_password.encode(), current_organizer.password_hash.encode()
+    ):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    current_organizer.password_hash = bcrypt.hashpw(
+        payload.new_password.encode(), bcrypt.gensalt()
+    ).decode()
+    revoke_token(organizer_access_token, db)
+    db.commit()
+    db.refresh(current_organizer)
+
+    remember_me = remember_me_from_access_token(organizer_access_token)
+    token = create_access_token(
+        current_organizer.username, ROLE_ORGANIZER, remember_me=remember_me
+    )
+    cookie_max_age = cookie_max_age_for_access_token(token)
+    set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
+    csrf_token = set_csrf_cookie(response, cookie_max_age)
+    audit("organizer.password_changed", organizer=current_organizer.username)
+    return LoginResponse(message="Password changed successfully.", csrf_token=csrf_token)
 
 
 @router.post("/logout", response_model=MessageResponse)

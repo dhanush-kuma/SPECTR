@@ -5,7 +5,14 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 // Paths the backend exempts from CSRF — mirror the server-side list so we
 // don't throw a CsrfError before the request even leaves the browser.
-const CSRF_EXEMPT_PATHS = new Set(['/setup', '/setup/status', '/admin/login', '/organizer/login', '/investigator/login'])
+const CSRF_EXEMPT_PATHS = new Set([
+  '/setup',
+  '/setup/status',
+  '/admin/login',
+  '/organizer/login',
+  '/organizer/forgot-password',
+  '/investigator/login',
+])
 
 export class CsrfError extends Error {
   constructor(message = 'CSRF token unavailable. Please sign in again.') {

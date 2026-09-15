@@ -108,27 +108,28 @@ class LoginResponse(BaseModel):
     csrf_token: str
 
 
-class CreateOrganizerRequest(BaseModel):
-    username: str
-    password: str
+class InviteOrganizerRequest(BaseModel):
+    email: str
 
-    @field_validator("username")
+    @field_validator("email")
     @classmethod
-    def username_not_empty(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Username cannot be empty")
-        return v
+    def email_normalized(cls, v: str) -> str:
+        return normalize_email(v)
 
-    @field_validator("password")
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
     @classmethod
-    def password_strength(cls, v: str) -> str:
-        return validate_new_password(v)
+    def email_normalized(cls, v: str) -> str:
+        return normalize_email(v)
 
 
 class OrganizerOut(BaseModel):
     id: int
     username: str
+    email: Optional[str] = None
     is_active: bool
 
     model_config = {"from_attributes": True}

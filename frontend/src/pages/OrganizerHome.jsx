@@ -61,14 +61,23 @@ function OrganizerHome() {
     <>
       <Header>
         {organizer && (
-          <button
-            id="btn-org-logout"
-            className="btn-secondary"
-            onClick={handleLogout}
-            disabled={loggingOut}
-          >
-            {loggingOut ? 'Logging out…' : 'Log out'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <Link
+              to="/organizer/change-password"
+              className="btn-primary"
+              style={{ textDecoration: 'none', padding: '6px 14px', fontSize: '13px' }}
+            >
+              Change Password
+            </Link>
+            <button
+              id="btn-org-logout"
+              className="btn-secondary"
+              onClick={handleLogout}
+              disabled={loggingOut}
+            >
+              {loggingOut ? 'Logging out…' : 'Log out'}
+            </button>
+          </div>
         )}
       </Header>
 

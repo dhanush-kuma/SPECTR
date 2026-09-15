@@ -9,6 +9,7 @@ import AdminProtectedRoute from './pages/AdminProtectedRoute'
 import OrganizerGuard from './pages/OrganizerGuard'
 import OrganizerLogin from './pages/OrganizerLogin'
 import OrganizerHome from './pages/OrganizerHome'
+import OrganizerChangePassword from './pages/OrganizerChangePassword'
 import OrganizerProtectedRoute from './pages/OrganizerProtectedRoute'
 import CreateStudy from './pages/CreateStudy'
 import StudyInvestigators from './pages/StudyInvestigators'
@@ -45,6 +46,14 @@ function App() {
         element={
           <OrganizerProtectedRoute>
             <OrganizerHome />
+          </OrganizerProtectedRoute>
+        }
+      />
+      <Route
+        path="/organizer/change-password"
+        element={
+          <OrganizerProtectedRoute>
+            <OrganizerChangePassword />
           </OrganizerProtectedRoute>
         }
       />

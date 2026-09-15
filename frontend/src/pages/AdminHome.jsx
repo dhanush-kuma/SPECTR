@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
-import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL, ORGANIZER_LABEL_PLURAL } from '../labels'
 
@@ -11,17 +10,14 @@ function AdminHome() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState(null)
 
-  // Organizer list & form state
   const [organizers, setOrganizers] = useState([])
   const [showForm, setShowForm] = useState(false)
-  const [orgUsername, setOrgUsername] = useState('')
-  const [orgPassword, setOrgPassword] = useState('')
+  const [orgEmail, setOrgEmail] = useState('')
   const [formError, setFormError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [successMsg, setSuccessMsg] = useState(null)
-  const [togglingId, setTogglingId] = useState(null)  // id of row being toggled
+  const [togglingId, setTogglingId] = useState(null)
 
-  // Verify session on mount and load organizers
   useEffect(() => {
     apiFetch('/admin/me')
       .then((res) => {
@@ -56,7 +52,7 @@ function AdminHome() {
     }
   }
 
-  async function handleCreateOrganizer(e) {
+  async function handleInviteOrganizer(e) {
     e.preventDefault()
     setFormError(null)
     setSuccessMsg(null)
@@ -65,18 +61,19 @@ function AdminHome() {
     try {
       const res = await apiFetch('/admin/organizers/', {
         method: 'POST',
-        json: { username: orgUsername, password: orgPassword },
+        json: { email: orgEmail },
       })
       const data = await res.json()
 
       if (!res.ok) {
-        setFormError(data.detail || `Failed to create ${ORGANIZER_LABEL}.`)
+        setFormError(data.detail || `Failed to invite ${ORGANIZER_LABEL}.`)
         return
       }
 
-      setSuccessMsg(`${ORGANIZER_LABEL} "${data.username}" created successfully.`)
-      setOrgUsername('')
-      setOrgPassword('')
+      setSuccessMsg(
+        `${ORGANIZER_LABEL} invited. Credentials sent to ${data.email}.`
+      )
+      setOrgEmail('')
       setShowForm(false)
       loadOrganizers()
     } catch {
@@ -89,8 +86,7 @@ function AdminHome() {
   function cancelForm() {
     setShowForm(false)
     setFormError(null)
-    setOrgUsername('')
-    setOrgPassword('')
+    setOrgEmail('')
   }
 
   return (
@@ -117,7 +113,6 @@ function AdminHome() {
         ) : (
           <>
             {logoutError && <p className="error">{logoutError}</p>}
-            {/* ── Welcome card ── */}
             <div className="status-card" style={{ marginBottom: '28px' }}>
               <div className="label">Session</div>
               <p className="message">
@@ -125,7 +120,6 @@ function AdminHome() {
               </p>
             </div>
 
-            {/* ── Organizer section ── */}
             <div className="section-header">
               <h2 className="section-title">{ORGANIZER_LABEL_PLURAL}</h2>
               {!showForm && (
@@ -134,51 +128,42 @@ function AdminHome() {
                   className="btn-primary"
                   onClick={() => { setSuccessMsg(null); setShowForm(true) }}
                 >
-                  + Create a new {ORGANIZER_LABEL}
+                  + Invite {ORGANIZER_LABEL}
                 </button>
               )}
             </div>
 
-            {/* Success banner */}
             {successMsg && (
               <p className="success-msg">{successMsg}</p>
             )}
 
-            {/* ── Create organizer form ── */}
             {showForm && (
               <div className="setup-card" style={{ marginBottom: '20px' }}>
                 <div className="setup-card__header">
                   <span className="setup-badge">New {ORGANIZER_LABEL}</span>
-                  <h2>Create {ORGANIZER_LABEL} Account</h2>
-                  <p>The {ORGANIZER_LABEL} will be able to manage study sessions.</p>
+                  <h2>Invite {ORGANIZER_LABEL}</h2>
+                  <p>
+                    A temporary password will be generated and sent to the provided email address.
+                    The CTC signs in using that email and password.
+                  </p>
                 </div>
-                <form className="setup-form" onSubmit={handleCreateOrganizer} noValidate>
+                <form className="setup-form" onSubmit={handleInviteOrganizer} noValidate>
                   <div className="field">
-                    <label htmlFor="org-username">Username</label>
+                    <label htmlFor="org-email">Email</label>
                     <input
-                      id="org-username"
-                      type="text"
-                      value={orgUsername}
-                      onChange={(e) => setOrgUsername(e.target.value)}
-                      placeholder="username"
+                      id="org-email"
+                      type="email"
+                      value={orgEmail}
+                      onChange={(e) => setOrgEmail(e.target.value)}
+                      placeholder="ctc@organization.org"
                       required
                       autoFocus
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="org-password">Password</label>
-                    <PasswordInput
-                      id="org-password"
-                      value={orgPassword}
-                      onChange={(e) => setOrgPassword(e.target.value)}
-                      placeholder="Min. 12 characters"
-                      required
                     />
                   </div>
                   {formError && <p className="error">{formError}</p>}
                   <div className="form-actions">
                     <button id="btn-org-submit" type="submit" className="btn-primary" disabled={submitting}>
-                      {submitting ? 'Creating…' : `Create ${ORGANIZER_LABEL}`}
+                      {submitting ? 'Sending invite…' : `Invite ${ORGANIZER_LABEL}`}
                     </button>
                     <button type="button" className="btn-secondary" onClick={cancelForm}>
                       Cancel
@@ -188,15 +173,15 @@ function AdminHome() {
               </div>
             )}
 
-            {/* ── Organizer table ── */}
             {organizers.length === 0 ? (
-              <p className="empty-state">No {ORGANIZER_LABEL_PLURAL} yet. Create one above.</p>
+              <p className="empty-state">No {ORGANIZER_LABEL_PLURAL} yet. Invite one above.</p>
             ) : (
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>Username</th>
+                    <th>Email</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -206,6 +191,7 @@ function AdminHome() {
                     <tr key={org.id}>
                       <td>{org.id}</td>
                       <td>{org.username}</td>
+                      <td>{org.email || '—'}</td>
                       <td>
                         <span className={`badge badge--${org.is_active ? 'active' : 'inactive'}`}>
                           {org.is_active ? 'Active' : 'Inactive'}

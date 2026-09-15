@@ -13,6 +13,27 @@ function OrganizerLogin() {
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotError, setForgotError] = useState(null)
+  const [forgotSuccess, setForgotSuccess] = useState(null)
+  const [forgotSubmitting, setForgotSubmitting] = useState(false)
+
+  function openForgotPassword() {
+    setForgotError(null)
+    setForgotSuccess(null)
+    if (username) {
+      setForgotEmail(username)
+    }
+    setShowForgotPassword(true)
+  }
+
+  function openSignIn() {
+    setForgotError(null)
+    setForgotSuccess(null)
+    setShowForgotPassword(false)
+  }
+
   async function handleLogin(e) {
     e.preventDefault()
     setError(null)
@@ -39,6 +60,37 @@ function OrganizerLogin() {
     }
   }
 
+  async function handleForgotPassword(e) {
+    e.preventDefault()
+    setForgotError(null)
+    setForgotSuccess(null)
+    setForgotSubmitting(true)
+
+    try {
+      const res = await apiFetch('/organizer/forgot-password', {
+        method: 'POST',
+        json: { email: forgotEmail },
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setForgotError(data.detail || 'Could not send a new password.')
+        return
+      }
+
+      setForgotSuccess(data.message)
+      setForgotEmail('')
+    } catch (err) {
+      if (err?.name === 'CsrfError') {
+        setForgotError(err.message)
+      } else {
+        setForgotError('Could not connect to backend.')
+      }
+    } finally {
+      setForgotSubmitting(false)
+    }
+  }
+
   return (
     <>
       <Header />
@@ -46,64 +98,114 @@ function OrganizerLogin() {
       <main className="app">
         <h1>{ORGANIZER_LABEL} Portal</h1>
 
-        <div className="setup-card">
-          <div className="setup-card__header">
-            <span className="setup-badge">{ORGANIZER_LABEL} Area</span>
-            <h2>{ORGANIZER_LABEL} Sign In</h2>
-            <p>Enter your {ORGANIZER_LABEL} credentials to log in to the randomizer.</p>
-          </div>
-
-          <form className="setup-form" onSubmit={handleLogin} noValidate>
-            <div className="field">
-              <label htmlFor="org-username">Username</label>
-              <input
-                id="org-username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="username"
-                required
-                autoComplete="username"
-                autoFocus
-              />
+        {!showForgotPassword ? (
+          <div className="setup-card">
+            <div className="setup-card__header">
+              <span className="setup-badge">{ORGANIZER_LABEL} Area</span>
+              <h2>{ORGANIZER_LABEL} Sign In</h2>
+              <p>Enter your {ORGANIZER_LABEL} credentials to log in to the randomizer.</p>
             </div>
 
-            <div className="field">
-              <label htmlFor="org-password">Password</label>
-              <PasswordInput
-                id="org-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            <div className="field field-checkbox">
-              <label htmlFor="org-remember-me" className="checkbox-label">
+            <form className="setup-form" onSubmit={handleLogin} noValidate>
+              <div className="field">
+                <label htmlFor="org-username">Email</label>
                 <input
-                  id="org-remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  id="org-username"
+                  type="email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="ctc@organization.org"
+                  required
+                  autoComplete="username"
+                  autoFocus
                 />
-                Keep me signed in for 30 days
-              </label>
+              </div>
+
+              <div className="field">
+                <label htmlFor="org-password">Password</label>
+                <PasswordInput
+                  id="org-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <div className="field field-checkbox">
+                <label htmlFor="org-remember-me" className="checkbox-label">
+                  <input
+                    id="org-remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  Keep me signed in for 30 days
+                </label>
+              </div>
+
+              {error && <p className="error">{error}</p>}
+
+              <button
+                id="btn-org-login"
+                type="submit"
+                className="btn-primary"
+                disabled={submitting}
+              >
+                {submitting ? 'Authenticating…' : 'Sign In'}
+              </button>
+
+              <p style={{ marginTop: '12px' }}>
+                <button type="button" className="auth-link" onClick={openForgotPassword}>
+                  Forgot password?
+                </button>
+              </p>
+            </form>
+          </div>
+        ) : (
+          <div className="setup-card">
+            <div className="setup-card__header">
+              <span className="setup-badge">Password Reset</span>
+              <h2>Forgot Password</h2>
+              <p>
+                Enter your email address and we will send you a new temporary password.
+              </p>
             </div>
 
-            {error && <p className="error">{error}</p>}
+            <form className="setup-form" onSubmit={handleForgotPassword} noValidate>
+              <div className="field">
+                <label htmlFor="org-forgot-email">Email</label>
+                <input
+                  id="org-forgot-email"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="ctc@organization.org"
+                  required
+                  autoFocus
+                />
+              </div>
 
-            <button
-              id="btn-org-login"
-              type="submit"
-              className="btn-primary"
-              disabled={submitting}
-            >
-              {submitting ? 'Authenticating…' : 'Sign In'}
-            </button>
-          </form>
-        </div>
+              {forgotError && <p className="error">{forgotError}</p>}
+              {forgotSuccess && <p className="success-msg">{forgotSuccess}</p>}
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={forgotSubmitting}
+              >
+                {forgotSubmitting ? 'Sending…' : 'Send New Password'}
+              </button>
+
+              <p style={{ marginTop: '12px' }}>
+                <button type="button" className="auth-link" onClick={openSignIn}>
+                  Sign in
+                </button>
+              </p>
+            </form>
+          </div>
+        )}
       </main>
     </>
   )
