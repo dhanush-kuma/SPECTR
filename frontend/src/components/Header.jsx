@@ -21,12 +21,6 @@ function Header({ children }) {
             Home
           </NavLink>
           <NavLink
-            to="/admin"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-          >
-            Admin
-          </NavLink>
-          <NavLink
             to="/organizer"
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
@@ -37,6 +31,12 @@ function Header({ children }) {
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
             Study Investigator (SI)
+          </NavLink>
+          <NavLink
+            to="/admin"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+          >
+            Admin
           </NavLink>
         </nav>
         {children}

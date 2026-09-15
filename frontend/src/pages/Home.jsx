@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiFetch } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
+import SpectrLanding from './SpectrLanding'
 
 function Home() {
   const navigate = useNavigate()
@@ -25,17 +26,17 @@ function Home() {
       })
       .then((data) => {
         if (data.initialized) {
-          navigate('/admin/login', { replace: true })
+          setPhase('landing')
         } else {
           setStatusMsg(data.message)
-          setPhase('ready')
+          setPhase('setup')
         }
       })
       .catch((err) => {
         setError(err.message)
         setPhase('error')
       })
-  }, [navigate])
+  }, [])
 
   async function handleSetup(e) {
     e.preventDefault()
@@ -51,7 +52,6 @@ function Home() {
         setFormError(data.detail || 'Setup failed.')
         return
       }
-      // Setup complete — send the user to the admin login page
       navigate('/admin/login', { replace: true })
     } catch {
       setFormError('Could not connect to backend.')
@@ -65,13 +65,15 @@ function Home() {
       <Header />
 
       <main className="app">
-        <h1>Open Source Study Randomizer</h1>
-
         {phase === 'loading' && <p className="loading">Checking system status…</p>}
         {phase === 'error' && <p className="error">{error}</p>}
 
-        {phase === 'ready' && (
+        {phase === 'landing' && <SpectrLanding />}
+
+        {phase === 'setup' && (
           <>
+            <h1>First-Run Setup</h1>
+
             <div className="status-card">
               <div className="label">System Status</div>
               <p className="message">{statusMsg}</p>
@@ -82,8 +84,8 @@ function Home() {
                 <span className="setup-badge">First-Run Setup</span>
                 <h2>Create Admin Account</h2>
                 <p>
-                  Requires the setup token configured on the server. Only works before
-                  an admin account exists.
+                  Requires the setup token configured on the server. Only works before an admin
+                  account exists.
                 </p>
               </div>
 

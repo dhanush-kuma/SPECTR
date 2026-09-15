@@ -740,3 +740,97 @@
 .investigator-table tbody tr:hover {
   background: #f8fafc;
 }
+
+/* ── Public landing (/) ───────────────────────────────────── */
+.landing {
+  text-align: left;
+  max-width: 100%;
+}
+
+.landing__hero {
+  margin-bottom: 28px;
+}
+
+.landing .landing__title {
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #1a1a2e;
+}
+
+.landing__lead {
+  font-size: 1.05rem;
+  color: #333;
+  margin: 0;
+}
+
+.landing__section {
+  margin-bottom: 28px;
+}
+
+.landing__section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.landing__section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2a6496;
+  margin: 16px 0 6px;
+}
+
+.landing__section p {
+  margin-bottom: 10px;
+}
+
+.landing__capability:first-of-type h3 {
+  margin-top: 0;
+}
+
+.landing__list,
+.landing__steps {
+  margin: 8px 0 0;
+  padding-left: 1.35rem;
+  color: #444;
+}
+
+.landing__list li,
+.landing__steps li {
+  margin-bottom: 8px;
+}
+
+.landing__cite-block {
+  background: #f8f9fa;
+  border-left: 4px solid #2a6496;
+  padding: 12px 16px;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.95rem;
+}
+
+.landing__footer {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid #d0d0d0;
+  font-size: 0.92rem;
+  color: #555;
+}
+
+.landing__footer p {
+  margin-bottom: 8px;
+}
+
+.landing a {
+  color: #2a6496;
+  word-break: break-word;
+}
+
+.landing a:hover {
+  text-decoration: underline;
+}
