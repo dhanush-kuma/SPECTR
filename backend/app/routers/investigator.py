@@ -1,4 +1,6 @@
+import logging
 from datetime import datetime, timezone
+
 import bcrypt
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy import func
@@ -7,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
+from ..core.email import send_unblind_notification
 from ..core.investigator_invite import reset_investigator_password
 from ..core.rate_limit import limiter
 from ..core.study_status import ACTIVE, COMPLETE, GENERATED
@@ -33,6 +36,8 @@ from ..schemas import (
     StrataAvailabilityOut,
     UnblindResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/investigator", tags=["investigator"])
 
@@ -415,11 +420,14 @@ def get_assignments(
     db: Session = Depends(get_db),
     current_investigator: Investigator = Depends(get_current_investigator),
 ):
+    if current_investigator.site_id is None:
+        return []
+
     records = (
         db.query(RandomizationRecord)
         .filter(
             RandomizationRecord.study_id == current_investigator.study_id,
-            RandomizationRecord.assigned_by_investigator_id == current_investigator.id,
+            RandomizationRecord.site_id == current_investigator.site_id,
             RandomizationRecord.assigned_patient_id.isnot(None),
         )
         .order_by(RandomizationRecord.assigned_at.desc())
@@ -438,12 +446,19 @@ def unblind_record(
     db: Session = Depends(get_db),
     current_investigator: Investigator = Depends(get_current_investigator),
 ):
+    if current_investigator.site_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Your account is not linked to a site. Contact the study coordinator.",
+        )
+
     record = (
         db.query(RandomizationRecord)
         .filter(
             RandomizationRecord.id == record_id,
             RandomizationRecord.study_id == current_investigator.study_id,
-            RandomizationRecord.assigned_by_investigator_id == current_investigator.id,
+            RandomizationRecord.site_id == current_investigator.site_id,
+            RandomizationRecord.assigned_patient_id.isnot(None),
         )
         .first()
     )
@@ -469,6 +484,25 @@ def unblind_record(
         patient_id=record.assigned_patient_id,
         treatment_name=record.treatment_name,
     )
+
+    organizer = study.organizer
+    if organizer:
+        try:
+            send_unblind_notification(
+                organizer.username,
+                study_title=study.title,
+                protocol_code=study.protocol_code,
+                investigator_username=current_investigator.username,
+                investigator_email=current_investigator.email,
+                investigator_name=current_investigator.name,
+                patient_id=record.assigned_patient_id or "",
+                kit_code=record.kit_code,
+                treatment_name=record.treatment_name,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send unblind notification to CTC for study %s", study.id
+            )
 
     return UnblindResponse(
         record_id=record.id,

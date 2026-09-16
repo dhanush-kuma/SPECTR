@@ -25,6 +25,7 @@ function InvestigatorHome() {
   const [selectedStrataId, setSelectedStrataId] = useState('')
   const [assignedRecord, setAssignedRecord] = useState(null)
   const [assignedList, setAssignedList] = useState([])
+  const [assignmentSearch, setAssignmentSearch] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [ieAttested, setIeAttested] = useState(false)
@@ -201,6 +202,13 @@ function InvestigatorHome() {
   const requiresIeAttestation = hasInclusionExclusionCriteria(
     investigator?.inclusion_exclusion_criteria
   )
+  const assignmentSearchTerm = assignmentSearch.trim().toLowerCase()
+  const filteredAssignments = assignmentSearchTerm
+    ? assignedList.filter((rec) =>
+        rec.assigned_patient_id?.toLowerCase().includes(assignmentSearchTerm)
+      )
+    : assignedList
+
   const canAssign = Boolean(
     patientId.trim()
     && selectedStrata
@@ -383,55 +391,92 @@ function InvestigatorHome() {
             {assignedList.length > 0 && (
               <div style={{ marginTop: '36px' }}>
                 <div className="section-header">
-                  <h2 className="section-title">Assigned {PARTICIPANT_LABEL} Records ({assignedList.length})</h2>
+                  <h2 className="section-title">
+                    Site {PARTICIPANT_LABEL} Records
+                    {assignmentSearchTerm
+                      ? ` (${filteredAssignments.length} of ${assignedList.length})`
+                      : ` (${assignedList.length})`}
+                  </h2>
+                  <input
+                    type="text"
+                    placeholder={`Search ${PARTICIPANT_LABEL.toLowerCase()} ID...`}
+                    value={assignmentSearch}
+                    onChange={(e) => setAssignmentSearch(e.target.value)}
+                    className="field input"
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '13px',
+                      border: '1px solid #b0b0b0',
+                      borderRadius: '3px',
+                      width: '210px',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
 
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>{PARTICIPANT_LABEL} ID</th>
-                      <th>Kit Code</th>
-                      <th>Treatment Arm</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {assignedList.map((rec, index) => (
-                      <tr key={rec.id}>
-                        <td>{index + 1}</td>
-                        <td><strong>{rec.assigned_patient_id}</strong></td>
-                        <td><code>{rec.kit_code}</code></td>
-                        <td>
-                          {!isDoubleBlind ? (
-                            <span>{rec.treatment_name}</span>
-                          ) : !rec.blind || unblindedRecords[rec.id] ? (
-                            <span
-                              style={{
-                                color: '#b91c1c',
-                                fontWeight: '600',
-                                background: '#fef2f2',
-                                padding: '2px 8px',
-                                borderRadius: '3px',
-                                border: '1px solid #fecaca',
-                                fontSize: '13px',
-                              }}
-                            >
-                              Unblinded: {unblindedRecords[rec.id] || rec.treatment_name}
-                            </span>
-                          ) : (
-                            <button
-                              className="btn-secondary"
-                              style={{ padding: '3px 10px', fontSize: '12px' }}
-                              onClick={() => handleOpenUnblindModal(rec)}
-                            >
-                              Unblind
-                            </button>
-                          )}
-                        </td>
+                {filteredAssignments.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
+                    No records match your search.
+                    {assignmentSearchTerm && (
+                      <> Try clearing your search query &quot;{assignmentSearch}&quot;.</>
+                    )}
+                  </p>
+                ) : (
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>{PARTICIPANT_LABEL} ID</th>
+                        <th>Kit Code</th>
+                        <th>Assigned By</th>
+                        <th>Treatment Arm</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {filteredAssignments.map((rec, index) => (
+                        <tr key={rec.id}>
+                          <td>{index + 1}</td>
+                          <td><strong>{rec.assigned_patient_id}</strong></td>
+                          <td><code>{rec.kit_code}</code></td>
+                          <td>
+                            {rec.assigned_by_investigator_username ? (
+                              <code>{rec.assigned_by_investigator_username}</code>
+                            ) : (
+                              <span style={{ color: '#888' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            {!isDoubleBlind ? (
+                              <span>{rec.treatment_name}</span>
+                            ) : !rec.blind || unblindedRecords[rec.id] ? (
+                              <span
+                                style={{
+                                  color: '#b91c1c',
+                                  fontWeight: '600',
+                                  background: '#fef2f2',
+                                  padding: '2px 8px',
+                                  borderRadius: '3px',
+                                  border: '1px solid #fecaca',
+                                  fontSize: '13px',
+                                }}
+                              >
+                                Unblinded: {unblindedRecords[rec.id] || rec.treatment_name}
+                              </span>
+                            ) : (
+                              <button
+                                className="btn-secondary"
+                                style={{ padding: '3px 10px', fontSize: '12px' }}
+                                onClick={() => handleOpenUnblindModal(rec)}
+                              >
+                                Unblind
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
           </>

@@ -173,3 +173,46 @@ If you did not request this, please contact your system administrator.
 """
 
     send_email(to_email, subject, body)
+
+
+def send_unblind_notification(
+    to_email: str,
+    *,
+    study_title: str,
+    protocol_code: str,
+    investigator_username: str,
+    investigator_email: str,
+    investigator_name: str | None,
+    patient_id: str,
+    kit_code: str,
+    treatment_name: str,
+) -> None:
+    subject = f"Emergency unblinding alert — {study_title}"
+    name_line = (
+        f"  Name     : {investigator_name.strip()}\n"
+        if investigator_name and investigator_name.strip()
+        else ""
+    )
+
+    body = f"""Hello,
+
+An investigator has performed an emergency unblinding on a study assignment.
+
+Study: {study_title}
+Protocol: {protocol_code.strip()}
+
+Investigator:
+  Username : {investigator_username}
+  Email    : {investigator_email}
+{name_line}
+Assignment:
+  Patient ID    : {patient_id}
+  Kit Code      : {kit_code}
+  Treatment Arm : {treatment_name}
+
+This event has been recorded in the audit log.
+
+— Study Randomizer
+"""
+
+    send_email(to_email, subject, body)
