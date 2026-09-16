@@ -1,21 +1,31 @@
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from ..config import verify_setup_token
+from ..config import set_csrf_cookie, verify_setup_token
 from ..core.audit import audit
 from ..core.rate_limit import limiter
 from ..database import get_db
 from ..models import Admin
-from ..schemas import HealthResponse, SetupRequest, SetupResponse, StatusResponse
+from ..schemas import CsrfResponse, HealthResponse, SetupRequest, SetupResponse, StatusResponse
 
 router = APIRouter(tags=["setup"])
+
+SETUP_ADVISORY_LOCK_KEY = 867530901
 
 
 @router.get("/health", response_model=HealthResponse)
 def health_check():
     """Public health check without exposing setup state."""
     return HealthResponse(status="ok", message="Study Randomizer API")
+
+
+@router.get("/csrf", response_model=CsrfResponse)
+def issue_csrf_token(response: Response):
+    """Issue a CSRF cookie for unauthenticated flows (login, forgot-password)."""
+    csrf_token = set_csrf_cookie(response, max_age=None)
+    return CsrfResponse(csrf_token=csrf_token)
 
 
 @router.get("/setup/status", response_model=StatusResponse)
@@ -47,6 +57,8 @@ def setup_admin(
     except ValueError as exc:
         audit("setup.failed", reason="invalid_token", ip=request.client.host if request.client else None)
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": SETUP_ADVISORY_LOCK_KEY})
 
     if db.query(Admin).first() is not None:
         raise HTTPException(

@@ -24,6 +24,7 @@ from ..core.rate_limit import limiter
 from ..core.security import (
     ROLE_ORGANIZER,
     bump_investigator_session,
+    bump_organizer_session,
     cookie_max_age_for_access_token,
     create_access_token,
     get_current_organizer,
@@ -61,6 +62,10 @@ from ..schemas import (
 router = APIRouter(prefix="/organizer", tags=["organizer"])
 
 COOKIE_NAME = "organizer_access_token"
+INVALID_ORGANIZER_CREDENTIALS = "Invalid email or password."
+GENERIC_ORGANIZER_RESET_MESSAGE = (
+    "If an account exists for that email, a new password has been sent."
+)
 
 
 def _get_study_for_organizer(study_id: int, organizer_id: int, db: Session) -> Study:
@@ -211,32 +216,27 @@ def login(
         raise HTTPException(status_code=400, detail="A valid email address is required.") from exc
 
     organizer = db.query(Organizer).filter(Organizer.username == username).first()
-    if not organizer:
-        audit(
-            "organizer.login.failed",
-            username=payload.username,
-            reason="not_found",
-            ip=request.client.host if request.client else None,
+    if (
+        not organizer
+        or not organizer.is_active
+        or not bcrypt.checkpw(
+            payload.password.encode(), organizer.password_hash.encode()
         )
-        raise HTTPException(status_code=404, detail="No account found for that email.")
-
-    if not bcrypt.checkpw(
-        payload.password.encode(), organizer.password_hash.encode()
     ):
         audit(
             "organizer.login.failed",
             username=payload.username,
-            reason="bad_password",
             ip=request.client.host if request.client else None,
         )
-        raise HTTPException(status_code=401, detail="Invalid password.")
-
-    if not organizer.is_active:
-        audit("organizer.login.failed", username=payload.username, reason="deactivated")
-        raise HTTPException(status_code=401, detail="Organizer account is deactivated.")
+        raise HTTPException(status_code=401, detail=INVALID_ORGANIZER_CREDENTIALS)
 
     remember_me = payload.remember_me
-    token = create_access_token(organizer.username, ROLE_ORGANIZER, remember_me=remember_me)
+    token = create_access_token(
+        organizer.username,
+        ROLE_ORGANIZER,
+        session_version=organizer.session_version,
+        remember_me=remember_me,
+    )
     cookie_max_age = cookie_max_age_for_access_token(token)
     set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
     csrf_token = set_csrf_cookie(response, cookie_max_age)
@@ -261,21 +261,15 @@ def forgot_password(
         db.rollback()
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    if not sent:
-        raise HTTPException(
-            status_code=404,
-            detail="No account found for that email.",
+    if sent:
+        db.commit()
+        audit(
+            "organizer.password_reset_requested",
+            email=payload.email,
+            ip=request.client.host if request.client else None,
         )
 
-    db.commit()
-    audit(
-        "organizer.password_reset_requested",
-        email=payload.email,
-        ip=request.client.host if request.client else None,
-    )
-    return MessageResponse(
-        message=f"A new password has been sent to {payload.email}."
-    )
+    return MessageResponse(message=GENERIC_ORGANIZER_RESET_MESSAGE)
 
 
 @router.post("/change-password", response_model=LoginResponse)
@@ -293,6 +287,7 @@ def change_password(
     ):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
+    bump_organizer_session(current_organizer)
     current_organizer.password_hash = bcrypt.hashpw(
         payload.new_password.encode(), bcrypt.gensalt()
     ).decode()
@@ -302,7 +297,10 @@ def change_password(
 
     remember_me = remember_me_from_access_token(organizer_access_token)
     token = create_access_token(
-        current_organizer.username, ROLE_ORGANIZER, remember_me=remember_me
+        current_organizer.username,
+        ROLE_ORGANIZER,
+        session_version=current_organizer.session_version,
+        remember_me=remember_me,
     )
     cookie_max_age = cookie_max_age_for_access_token(token)
     set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
@@ -708,7 +706,9 @@ async def bulk_invite_site_investigators(
     "/studies/{study_id}/sites/{site_id}/investigators/{investigator_id}/revoke",
     response_model=InvestigatorOut,
 )
+@limiter.limit("30/hour")
 def revoke_site_investigator(
+    request: Request,
     study_id: int,
     site_id: int,
     investigator_id: int,
@@ -740,7 +740,9 @@ def revoke_site_investigator(
     "/studies/{study_id}/sites/{site_id}/investigators/{investigator_id}/restore",
     response_model=InvestigatorOut,
 )
+@limiter.limit("30/hour")
 def restore_site_investigator(
+    request: Request,
     study_id: int,
     site_id: int,
     investigator_id: int,
@@ -899,7 +901,9 @@ def get_study_sites(
     "/studies/{study_id}/randomization-records",
     response_model=PaginatedRandomizationRecords,
 )
+@limiter.limit("60/minute")
 def get_randomization_records(
+    request: Request,
     study_id: int,
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=20, ge=1, le=100),

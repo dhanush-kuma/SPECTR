@@ -8,11 +8,10 @@ const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 const CSRF_EXEMPT_PATHS = new Set([
   '/setup',
   '/setup/status',
+  '/csrf',
   '/admin/login',
   '/organizer/login',
-  '/organizer/forgot-password',
   '/investigator/login',
-  '/investigator/forgot-password',
 ])
 
 export class CsrfError extends Error {
@@ -45,6 +44,15 @@ export function storeCsrfFromResponse(data) {
   if (data?.csrf_token) setCsrfToken(data.csrf_token)
 }
 
+/** Fetch a CSRF cookie/token for unauthenticated pages (login, forgot-password). */
+export async function bootstrapCsrf() {
+  const res = await fetch(`${API_URL}/csrf`, { credentials: 'include' })
+  if (!res.ok) return ''
+  const data = await res.json()
+  storeCsrfFromResponse(data)
+  return data.csrf_token || ''
+}
+
 /** POST logout; clears CSRF only when the server confirms logout. */
 export async function apiLogout(path) {
   const res = await apiFetch(path, { method: 'POST' })
@@ -75,14 +83,16 @@ async function bootstrapCsrfIfNeeded(apiPath) {
   if (existing) return existing
 
   const mePath = mePathForApiPath(apiPath)
-  if (!mePath) return ''
+  if (mePath) {
+    const res = await fetch(`${API_URL}${mePath}`, { credentials: 'include' })
+    if (res.ok) {
+      const data = await res.json()
+      storeCsrfFromResponse(data)
+      return data.csrf_token || ''
+    }
+  }
 
-  const res = await fetch(`${API_URL}${mePath}`, { credentials: 'include' })
-  if (!res.ok) return ''
-
-  const data = await res.json()
-  storeCsrfFromResponse(data)
-  return data.csrf_token || ''
+  return bootstrapCsrf()
 }
 
 async function requireCsrfToken(apiPath) {

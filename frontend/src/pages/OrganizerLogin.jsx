@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch, setCsrfToken } from '../api'
+import { apiFetch, bootstrapCsrf, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL } from '../labels'
@@ -18,6 +18,10 @@ function OrganizerLogin() {
   const [forgotError, setForgotError] = useState(null)
   const [forgotSuccess, setForgotSuccess] = useState(null)
   const [forgotSubmitting, setForgotSubmitting] = useState(false)
+
+  useEffect(() => {
+    bootstrapCsrf()
+  }, [])
 
   function openForgotPassword() {
     setForgotError(null)
@@ -79,7 +83,15 @@ function OrganizerLogin() {
         method: 'POST',
         json: { email: forgotEmail },
       })
-      const data = await res.json()
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        if (!res.ok) {
+          setForgotError('Could not send a new password. Please try again.')
+          return
+        }
+      }
 
       if (!res.ok) {
         setForgotError(data.detail || 'Could not send a new password.')

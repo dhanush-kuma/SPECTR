@@ -54,6 +54,10 @@ class HealthResponse(BaseModel):
     message: str
 
 
+class CsrfResponse(BaseModel):
+    csrf_token: str
+
+
 class SetupResponse(BaseModel):
     success: bool
     message: str

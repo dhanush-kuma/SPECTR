@@ -7,7 +7,7 @@ from ..core.organizer_invite import (
     create_and_send_organizer_invite,
 )
 from ..core.rate_limit import limiter
-from ..core.security import get_current_admin
+from ..core.security import bump_organizer_session, get_current_admin
 from ..database import get_db
 from ..models import Admin, Organizer
 from ..schemas import InviteOrganizerRequest, OrganizerOut
@@ -53,7 +53,9 @@ def list_organizers(
 
 
 @router.patch("/{organizer_id}/status", response_model=OrganizerOut)
+@limiter.limit("30/hour")
 def toggle_organizer_status(
+    request: Request,
     organizer_id: int,
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
@@ -63,6 +65,8 @@ def toggle_organizer_status(
         raise HTTPException(status_code=404, detail="Organizer not found.")
 
     organizer.is_active = not organizer.is_active
+    if not organizer.is_active:
+        bump_organizer_session(organizer)
     db.commit()
     db.refresh(organizer)
     audit(

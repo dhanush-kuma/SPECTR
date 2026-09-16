@@ -13,7 +13,6 @@ from ..schemas import AdminInfo, LoginRequest, LoginResponse, MessageResponse
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 COOKIE_NAME = "access_token"
-COOKIE_MAX_AGE = 60 * 60 * 24
 
 
 @router.get("/me", response_model=AdminInfo)
@@ -21,7 +20,7 @@ def get_me(
     response: Response,
     current_admin: Admin = Depends(get_current_admin),
 ):
-    csrf_token = set_csrf_cookie(response, COOKIE_MAX_AGE)
+    csrf_token = set_csrf_cookie(response, max_age=None)
     return AdminInfo(username=current_admin.username, csrf_token=csrf_token)
 
 
@@ -45,8 +44,8 @@ def login(
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
     token = create_access_token(admin.username, ROLE_ADMIN)
-    set_auth_cookie(response, COOKIE_NAME, token, COOKIE_MAX_AGE)
-    csrf_token = set_csrf_cookie(response, COOKIE_MAX_AGE)
+    set_auth_cookie(response, COOKIE_NAME, token, max_age=None)
+    csrf_token = set_csrf_cookie(response, max_age=None)
     audit(
         "admin.login.success",
         username=admin.username,

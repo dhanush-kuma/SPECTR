@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch, parseApiError, setCsrfToken } from '../api'
+import { apiFetch, bootstrapCsrf, parseApiError, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
 import { INVESTIGATOR_LABEL, ORGANIZER_LABEL } from '../labels'
@@ -18,6 +18,10 @@ function InvestigatorLogin() {
   const [forgotError, setForgotError] = useState(null)
   const [forgotSuccess, setForgotSuccess] = useState(null)
   const [forgotSubmitting, setForgotSubmitting] = useState(false)
+
+  useEffect(() => {
+    bootstrapCsrf()
+  }, [])
 
   function openForgotPassword() {
     setForgotError(null)

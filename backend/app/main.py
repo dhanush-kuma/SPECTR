@@ -55,11 +55,25 @@ def _mount_frontend(app: FastAPI) -> None:
         logging.warning("FRONTEND_DIST set but index.html missing: %s", dist)
         return
 
+    dist_resolved = dist.resolve()
+
+    def _safe_dist_file(relative_path: str) -> Path | None:
+        if not relative_path:
+            return None
+        candidate = (dist_resolved / relative_path).resolve()
+        try:
+            candidate.relative_to(dist_resolved)
+        except ValueError:
+            return None
+        if candidate.is_file():
+            return candidate
+        return None
+
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        candidate = dist / full_path
-        if full_path and candidate.is_file():
-            return FileResponse(candidate)
+        safe_file = _safe_dist_file(full_path)
+        if safe_file is not None:
+            return FileResponse(safe_file)
         return FileResponse(index_html)
 
 

@@ -43,6 +43,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/investigator", tags=["investigator"])
 
 COOKIE_NAME = "investigator_access_token"
+GENERIC_INVESTIGATOR_RESET_MESSAGE = (
+    "If an account exists for that username, a new password has been sent to the email on file."
+)
 
 
 def _investigator_record_out(
@@ -85,9 +88,12 @@ def login(
         .filter(Investigator.username == payload.username)
         .first()
     )
-
-    if not investigator or not bcrypt.checkpw(
-        payload.password.encode(), investigator.password_hash.encode()
+    if (
+        not investigator
+        or investigator.status == "revoked"
+        or not bcrypt.checkpw(
+            payload.password.encode(), investigator.password_hash.encode()
+        )
     ):
         audit(
             "investigator.login.failed",
@@ -96,16 +102,6 @@ def login(
         )
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
-    if investigator.status == "revoked":
-        audit(
-            "investigator.login.failed",
-            username=payload.username,
-            reason="revoked",
-            ip=request.client.host if request.client else None,
-        )
-        raise HTTPException(status_code=401, detail="Your access to this study has been revoked.")
-
-    # Promote inactive → active on first login
     if investigator.status == "inactive":
         investigator.status = "active"
         db.commit()
@@ -136,39 +132,22 @@ def forgot_password(
     payload: InvestigatorForgotPasswordRequest,
     db: Session = Depends(get_db),
 ):
-    investigator = (
-        db.query(Investigator)
-        .filter(Investigator.username == payload.username)
-        .first()
-    )
-    if investigator and investigator.status == "revoked":
-        raise HTTPException(
-            status_code=403,
-            detail="Your access has been revoked. Contact your Central Trial Coordinator (CTC).",
-        )
-
     try:
         updated = reset_investigator_password(username=payload.username, db=db)
     except RuntimeError as exc:
         db.rollback()
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    if not updated:
-        raise HTTPException(
-            status_code=404,
-            detail="No account found for that username.",
+    if updated:
+        db.commit()
+        audit(
+            "investigator.password_reset_requested",
+            username=payload.username,
+            investigator_id=updated.id,
+            ip=request.client.host if request.client else None,
         )
 
-    db.commit()
-    audit(
-        "investigator.password_reset_requested",
-        username=payload.username,
-        investigator_id=updated.id,
-        ip=request.client.host if request.client else None,
-    )
-    return MessageResponse(
-        message="A new password has been sent to the email address on file for that account."
-    )
+    return MessageResponse(message=GENERIC_INVESTIGATOR_RESET_MESSAGE)
 
 
 @router.post("/logout", response_model=MessageResponse)
@@ -468,7 +447,9 @@ def get_assignments(
 
 
 @router.post("/records/{record_id}/unblind", response_model=UnblindResponse)
+@limiter.limit("10/hour")
 def unblind_record(
+    request: Request,
     record_id: int,
     db: Session = Depends(get_db),
     current_investigator: Investigator = Depends(get_current_investigator),

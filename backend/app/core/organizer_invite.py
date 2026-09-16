@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..models import Organizer
 from .email import send_organizer_credentials
 from .investigators import generate_temp_password
+from .security import bump_organizer_session
 from .validators import normalize_email
 
 
@@ -71,6 +72,7 @@ def reset_organizer_password(*, email: str, db: Session) -> bool:
     organizer.password_hash = bcrypt.hashpw(
         temp_password.encode(), bcrypt.gensalt()
     ).decode()
+    bump_organizer_session(organizer)
     db.flush()
 
     send_organizer_credentials(

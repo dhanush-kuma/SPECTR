@@ -5,7 +5,7 @@ from fastapi import Cookie, Depends, HTTPException
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from ..config import SECRET_KEY
+from ..config import JWT_AUDIENCE, JWT_ISSUER, SECRET_KEY
 from ..database import get_db
 from ..models import Admin, Investigator, Organizer, RevokedToken
 
@@ -13,7 +13,6 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 REMEMBER_ME_DAYS = 30
 REMEMBER_ME_MAX_AGE_SECONDS = REMEMBER_ME_DAYS * 24 * 60 * 60
-ADMIN_COOKIE_MAX_AGE_SECONDS = ACCESS_TOKEN_EXPIRE_HOURS * 60 * 60
 ROLE_ADMIN = "admin"
 ROLE_ORGANIZER = "organizer"
 ROLE_INVESTIGATOR = "investigator"
@@ -37,6 +36,8 @@ def create_access_token(
         "role": role,
         "jti": str(uuid.uuid4()),
         "exp": expire,
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
     }
     if role in (ROLE_ORGANIZER, ROLE_INVESTIGATOR):
         payload["rm"] = remember_me
@@ -54,7 +55,7 @@ def cookie_max_age_for_access_token(access_token: str | None) -> int | None:
         return None
     role = payload.get("role")
     if role == ROLE_ADMIN:
-        return ADMIN_COOKIE_MAX_AGE_SECONDS
+        return None
     if payload.get("rm"):
         return REMEMBER_ME_MAX_AGE_SECONDS
     return None
@@ -67,9 +68,20 @@ def remember_me_from_access_token(access_token: str | None) -> bool:
 
 def decode_token(token: str) -> dict | None:
     try:
-        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER,
+        )
     except JWTError:
         return None
+
+
+def purge_expired_revoked_tokens(db: Session) -> None:
+    now = datetime.now(timezone.utc)
+    db.query(RevokedToken).filter(RevokedToken.expires_at < now).delete()
 
 
 def is_token_revoked(jti: str, db: Session) -> bool:
@@ -89,6 +101,7 @@ def revoke_token(token: str | None, db: Session) -> None:
     if is_token_revoked(jti, db):
         return
     expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+    purge_expired_revoked_tokens(db)
     db.add(RevokedToken(jti=jti, expires_at=expires_at))
     db.commit()
 
@@ -137,6 +150,11 @@ def get_current_organizer(
         raise HTTPException(status_code=401, detail="Organizer not found.")
     if not organizer.is_active:
         raise HTTPException(status_code=401, detail="Organizer account is deactivated.")
+
+    payload = decode_token(organizer_access_token) if organizer_access_token else None
+    token_session_version = payload.get("sv") if payload else None
+    if token_session_version is None or token_session_version != organizer.session_version:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
     return organizer
 
 
@@ -170,3 +188,8 @@ def get_current_investigator(
 def bump_investigator_session(investigator: Investigator) -> None:
     """Invalidate all outstanding investigator JWTs."""
     investigator.session_version += 1
+
+
+def bump_organizer_session(organizer: Organizer) -> None:
+    """Invalidate all outstanding organizer JWTs."""
+    organizer.session_version += 1

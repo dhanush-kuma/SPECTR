@@ -36,6 +36,9 @@ DATABASE_URL = normalize_database_url(
 SECRET_KEY = os.environ.get("SECRET_KEY", DEFAULT_SECRET_KEY)
 SETUP_TOKEN = os.environ.get("SETUP_TOKEN", "")
 
+JWT_ISSUER = os.environ.get("JWT_ISSUER", "spectr")
+JWT_AUDIENCE = os.environ.get("JWT_AUDIENCE", "spectr-api")
+
 CORS_ORIGINS = [
     origin.strip()
     for origin in os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",")
