@@ -6,6 +6,18 @@ import { ORGANIZER_LABEL, INVESTIGATOR_LABEL, PARTICIPANT_LABEL, PARTICIPANT_LAB
 import { BLINDING_TYPE, blindingTypeLabel } from '../utils/blindingType'
 import { downloadCsv, rowsToCsv } from '../utils/csv'
 
+const TABLE_ACTION_BTN_STYLE = {
+  fontSize: '13px',
+  padding: '6px 14px',
+  whiteSpace: 'nowrap',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '132px',
+  boxSizing: 'border-box',
+  lineHeight: 1.2,
+}
+
 function StudyHome() {
   const { studyId } = useParams()
   const navigate = useNavigate()
@@ -389,7 +401,7 @@ function StudyHome() {
                       <button
                         type="button"
                         className="btn-secondary"
-                        style={{ fontSize: '13px', whiteSpace: 'nowrap' }}
+                        style={TABLE_ACTION_BTN_STYLE}
                         onClick={handleExportRecords}
                         disabled={exportingRecords || !recordsData?.total_count}
                       >
@@ -400,7 +412,7 @@ function StudyHome() {
                         <Link
                           to={`/organizer/studies/${studyId}/upload-csv`}
                           className="btn-secondary"
-                          style={{ textDecoration: 'none', fontSize: '13px' }}
+                          style={{ ...TABLE_ACTION_BTN_STYLE, textDecoration: 'none' }}
                         >
                           Re-upload CSV
                         </Link>

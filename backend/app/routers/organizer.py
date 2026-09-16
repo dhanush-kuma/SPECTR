@@ -809,6 +809,8 @@ async def upload_randomization_csv(
 
         study.status = GENERATED
         study.random_seed = "csv-upload"
+        study.target_sample_size = len(parsed_rows)
+        study.randomization_method = "NA"
 
         db.commit()
     except Exception:
