@@ -129,7 +129,6 @@ class ForgotPasswordRequest(BaseModel):
 class OrganizerOut(BaseModel):
     id: int
     username: str
-    email: Optional[str] = None
     is_active: bool
 
     model_config = {"from_attributes": True}

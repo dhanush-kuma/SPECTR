@@ -44,7 +44,15 @@ function OrganizerLogin() {
         method: 'POST',
         json: { username, password, remember_me: rememberMe },
       })
-      const data = await res.json()
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        if (!res.ok) {
+          setError('Login failed. Please try again.')
+          return
+        }
+      }
 
       if (!res.ok) {
         setError(data.detail || 'Login failed.')

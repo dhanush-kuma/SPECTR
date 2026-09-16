@@ -71,7 +71,7 @@ function AdminHome() {
       }
 
       setSuccessMsg(
-        `${ORGANIZER_LABEL} invited. Credentials sent to ${data.email}.`
+        `${ORGANIZER_LABEL} invited. Credentials sent to ${data.username}.`
       )
       setOrgEmail('')
       setShowForm(false)
@@ -180,7 +180,6 @@ function AdminHome() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Username</th>
                     <th>Email</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -191,7 +190,6 @@ function AdminHome() {
                     <tr key={org.id}>
                       <td>{org.id}</td>
                       <td>{org.username}</td>
-                      <td>{org.email || '—'}</td>
                       <td>
                         <span className={`badge badge--${org.is_active ? 'active' : 'inactive'}`}>
                           {org.is_active ? 'Active' : 'Inactive'}

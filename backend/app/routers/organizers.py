@@ -39,7 +39,6 @@ def invite_organizer(
     audit(
         "organizer.invited",
         organizer=organizer.username,
-        email=organizer.email,
         admin=current_admin.username,
     )
     return organizer

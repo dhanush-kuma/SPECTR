@@ -2,7 +2,6 @@
 Shared logic for inviting CTCs (organizers) via email.
 """
 import bcrypt
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..models import Organizer
@@ -22,7 +21,7 @@ class DuplicateOrganizerError(Exception):
 def organizer_exists(email: str, db: Session) -> bool:
     return (
         db.query(Organizer)
-        .filter(or_(Organizer.email == email, Organizer.username == email))
+        .filter(Organizer.username == email)
         .first()
         is not None
     )
@@ -43,7 +42,6 @@ def create_and_send_organizer_invite(*, email: str, db: Session) -> Organizer:
 
     organizer = Organizer(
         username=email,
-        email=email,
         password_hash=password_hash,
         is_active=True,
     )
@@ -65,11 +63,7 @@ def reset_organizer_password(*, email: str, db: Session) -> bool:
     """
     email = normalize_email(email)
 
-    organizer = (
-        db.query(Organizer)
-        .filter(or_(Organizer.email == email, Organizer.username == email))
-        .first()
-    )
+    organizer = db.query(Organizer).filter(Organizer.username == email).first()
     if not organizer or not organizer.is_active:
         return False
 
@@ -80,7 +74,7 @@ def reset_organizer_password(*, email: str, db: Session) -> bool:
     db.flush()
 
     send_organizer_credentials(
-        to_email=organizer.email or organizer.username,
+        to_email=email,
         temp_password=temp_password,
         is_reset=True,
     )

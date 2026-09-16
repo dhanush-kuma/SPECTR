@@ -16,11 +16,9 @@ class Admin(Base):
 
 class Organizer(Base):
     __tablename__ = "organizer"
-    __table_args__ = (UniqueConstraint("email", name="uq_organizer_email"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(

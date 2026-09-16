@@ -15,6 +15,7 @@ from ..core.investigator_invite import (
     parse_investigator_csv,
 )
 from ..core.organizer_invite import reset_organizer_password
+from ..core.validators import normalize_email
 from ..core.csv_limits import read_csv_upload_limited
 from ..core.csv_randomization import persist_csv_randomization
 from ..core.randomization_csv import parse_randomization_csv
@@ -188,18 +189,31 @@ def login(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    organizer = (
-        db.query(Organizer).filter(Organizer.username == payload.username).first()
-    )
-    if not organizer or not bcrypt.checkpw(
+    try:
+        username = normalize_email(payload.username)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="A valid email address is required.") from exc
+
+    organizer = db.query(Organizer).filter(Organizer.username == username).first()
+    if not organizer:
+        audit(
+            "organizer.login.failed",
+            username=payload.username,
+            reason="not_found",
+            ip=request.client.host if request.client else None,
+        )
+        raise HTTPException(status_code=404, detail="No account found for that email.")
+
+    if not bcrypt.checkpw(
         payload.password.encode(), organizer.password_hash.encode()
     ):
         audit(
             "organizer.login.failed",
             username=payload.username,
+            reason="bad_password",
             ip=request.client.host if request.client else None,
         )
-        raise HTTPException(status_code=401, detail="Invalid username or password.")
+        raise HTTPException(status_code=401, detail="Invalid password.")
 
     if not organizer.is_active:
         audit("organizer.login.failed", username=payload.username, reason="deactivated")
