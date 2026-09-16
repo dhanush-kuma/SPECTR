@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { INVESTIGATOR_LABEL_PLURAL } from '../labels'
 import {
+  BLINDING_TYPE_OPTIONS,
+  DEFAULT_BLINDING_TYPE,
+} from '../utils/blindingType'
+import {
   buildStudyDetailsPayload,
   criteriaFromStudy,
 } from '../utils/studyForm'
@@ -20,7 +24,9 @@ function StudyDetailsForm({
   const [title, setTitle] = useState(initial.title ?? '')
   const [protocolCode, setProtocolCode] = useState(initial.protocolCode ?? '')
   const [description, setDescription] = useState(initial.description ?? '')
-  const [blindingType, setBlindingType] = useState(initial.blindingType ?? 'Double-Blind')
+  const [blindingType, setBlindingType] = useState(
+    initial.blindingType ?? DEFAULT_BLINDING_TYPE
+  )
   const [emergencyUnblinding, setEmergencyUnblinding] = useState(
     initial.emergencyUnblinding ?? true
   )
@@ -70,7 +76,7 @@ function StudyDetailsForm({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. A Multi-Center Double-Blind Trial of Drug X"
+            placeholder="e.g. A Multi-Center PIB Trial of Drug X"
             required
           />
         </div>
@@ -93,11 +99,13 @@ function StudyDetailsForm({
             id="blinding-type"
             className="select-input"
             value={blindingType}
-            onChange={(e) => setBlindingType(e.target.value)}
+            onChange={(e) => setBlindingType(Number(e.target.value))}
           >
-            <option value="Double-Blind">Double-Blind</option>
-            <option value="Single-Blind">Single-Blind</option>
-            <option value="Open-Label">Open-Label</option>
+            {BLINDING_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
 

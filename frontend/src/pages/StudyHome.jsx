@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { apiFetch } from '../api'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL, INVESTIGATOR_LABEL, PARTICIPANT_LABEL, PARTICIPANT_LABEL_PLURAL } from '../labels'
+import { BLINDING_TYPE, blindingTypeLabel } from '../utils/blindingType'
 import { downloadCsv, rowsToCsv } from '../utils/csv'
 
 function StudyHome() {
@@ -116,12 +117,13 @@ function StudyHome() {
     setExportingRecords(true)
     try {
       const records = await fetchAllRandomizationRecords()
+      const hideTreatmentArm = study?.blinding_type === BLINDING_TYPE.PISB
       const headers = [
         'Seq #',
         'Kit Code',
         'Site',
         'Strata',
-        'Treatment Arm',
+        ...(hideTreatmentArm ? [] : ['Treatment Arm']),
         'Blind Status',
         `${PARTICIPANT_LABEL} ID`,
         `${INVESTIGATOR_LABEL} ID`,
@@ -135,7 +137,7 @@ function StudyHome() {
         rec.kit_code || '',
         rec.site_name || '',
         rec.strata_name || '',
-        rec.treatment_name || '',
+        ...(hideTreatmentArm ? [] : [rec.treatment_name || '']),
         rec.blind ? 'Blinded' : 'Unblinded',
         rec.assigned_patient_id || '',
         rec.assigned_by_investigator_username
@@ -182,7 +184,7 @@ function StudyHome() {
                     {study.status}
                   </span>
                   {' · '}
-                  <span>{study.blinding_type}</span>
+                  <span>{blindingTypeLabel(study.blinding_type)}</span>
                   {study.status === 'Active' && (
                     <span style={{ marginLeft: '12px', fontSize: '13px', color: '#555', fontWeight: 600 }}>
                       [Setup Locked]

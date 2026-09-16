@@ -34,9 +34,9 @@ def upgrade() -> None:
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column(
             'blinding_type',
-            sa.String(length=50),
+            sa.SmallInteger(),
             nullable=False,
-            server_default='Double-Blind',
+            server_default='2',
         ),
         sa.Column('target_sample_size', sa.Integer(), nullable=True),
         sa.Column(

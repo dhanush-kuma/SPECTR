@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, field_validator
 
+from .core.blinding_type import BlindingType, validate_blinding_type
 from .core.validators import normalize_email
 from .core.investigators import normalize_investigator_username
 
@@ -187,13 +188,18 @@ class StudyCreate(BaseModel):
     title: str
     protocol_code: str
     description: Optional[str] = None
-    blinding_type: str = "Double-Blind"
+    blinding_type: int = BlindingType.PIB
     target_sample_size: Optional[int] = None
     randomization_method: str = "Permuted Block"
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: bool = True
     inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     treatment_arms: list[TreatmentArmCreate] = []
+
+    @field_validator("blinding_type")
+    @classmethod
+    def valid_blinding_type(cls, v: int) -> int:
+        return validate_blinding_type(v)
 
     @field_validator("title", "protocol_code")
     @classmethod
@@ -208,13 +214,20 @@ class StudyUpdate(BaseModel):
     title: Optional[str] = None
     protocol_code: Optional[str] = None
     description: Optional[str] = None
-    blinding_type: Optional[str] = None
+    blinding_type: Optional[int] = None
     target_sample_size: Optional[int] = None
     randomization_method: Optional[str] = None
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: Optional[bool] = None
     inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     status: Optional[str] = None
+
+    @field_validator("blinding_type")
+    @classmethod
+    def valid_blinding_type(cls, v: Optional[int]) -> Optional[int]:
+        if v is None:
+            return v
+        return validate_blinding_type(v)
 
     @field_validator("protocol_code")
     @classmethod
@@ -233,7 +246,7 @@ class StudyOut(BaseModel):
     title: str
     protocol_code: str
     description: Optional[str] = None
-    blinding_type: str
+    blinding_type: int
     target_sample_size: Optional[int] = None
     randomization_method: str
     block_size_rules: Optional[str] = None
@@ -297,7 +310,7 @@ class InvestigatorInfo(BaseModel):
     trial_id: str
     study_title: Optional[str] = None
     study_description: Optional[str] = None
-    blinding_type: Optional[str] = None
+    blinding_type: Optional[int] = None
     emergency_unblinding_allowed: Optional[bool] = None
     inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     status: str

@@ -4,6 +4,7 @@ import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 import InclusionExclusionModal from '../components/InclusionExclusionModal'
 import { INVESTIGATOR_LABEL, ORGANIZER_LABEL, PARTICIPANT_LABEL } from '../labels'
+import { BLINDING_TYPE, investigatorIsBlinded } from '../utils/blindingType'
 import { downloadCsv, rowsToCsv } from '../utils/csv'
 
 function hasInclusionExclusionCriteria(criteria) {
@@ -11,6 +12,27 @@ function hasInclusionExclusionCriteria(criteria) {
   return (
     (criteria.inclusions?.length ?? 0) > 0
     || (criteria.exclusions?.length ?? 0) > 0
+  )
+}
+
+function PbTreatmentArmCell({ treatmentName, revealed, onView }) {
+  if (revealed) {
+    return <span>{treatmentName || '—'}</span>
+  }
+
+  return (
+    <span className="pb-treatment-arm">
+      <span className="pb-treatment-arm__text" aria-hidden="true">
+        {treatmentName || 'Unknown'}
+      </span>
+      <button
+        type="button"
+        className="btn-secondary pb-treatment-arm__view"
+        onClick={onView}
+      >
+        View
+      </button>
+    </span>
   )
 }
 
@@ -54,6 +76,7 @@ function InvestigatorHome() {
   const [unblindModalRecord, setUnblindModalRecord] = useState(null)
   const [unblindError, setUnblindError] = useState(null)
   const [unblindingSubmitting, setUnblindingSubmitting] = useState(false)
+  const [revealedPbArms, setRevealedPbArms] = useState({})
 
   function loadAssignments() {
     apiFetch('/investigator/assignments')
@@ -199,7 +222,7 @@ function InvestigatorHome() {
   }
 
   function getTreatmentArmForExport(rec) {
-    if (!isDoubleBlind) {
+    if (!investigatorBlinded) {
       return rec.treatment_name || ''
     }
     if (!rec.blind || unblindedRecords[rec.id]) {
@@ -236,7 +259,8 @@ function InvestigatorHome() {
     downloadCsv(filename, rowsToCsv(headers, rows))
   }
 
-  const isDoubleBlind = investigator?.blinding_type === 'Double-Blind'
+  const investigatorBlinded = investigatorIsBlinded(investigator?.blinding_type)
+  const isParticipantBlinding = investigator?.blinding_type === BLINDING_TYPE.PB
   const selectedStrata = strataOptions.find((s) => String(s.id) === String(selectedStrataId))
   const requiresIeAttestation = hasInclusionExclusionCriteria(
     investigator?.inclusion_exclusion_criteria
@@ -496,30 +520,38 @@ function InvestigatorHome() {
                             )}
                           </td>
                           <td>
-                            {!isDoubleBlind ? (
-                              <span>{rec.treatment_name}</span>
-                            ) : !rec.blind || unblindedRecords[rec.id] ? (
-                              <span
-                                style={{
-                                  color: '#b91c1c',
-                                  fontWeight: '600',
-                                  background: '#fef2f2',
-                                  padding: '2px 8px',
-                                  borderRadius: '3px',
-                                  border: '1px solid #fecaca',
-                                  fontSize: '13px',
-                                }}
-                              >
-                                Unblinded: {unblindedRecords[rec.id] || rec.treatment_name}
-                              </span>
+                            {investigatorBlinded ? (
+                              !rec.blind || unblindedRecords[rec.id] ? (
+                                <span
+                                  style={{
+                                    color: '#b91c1c',
+                                    fontWeight: '600',
+                                    background: '#fef2f2',
+                                    padding: '2px 8px',
+                                    borderRadius: '3px',
+                                    border: '1px solid #fecaca',
+                                    fontSize: '13px',
+                                  }}
+                                >
+                                  Unblinded: {unblindedRecords[rec.id] || rec.treatment_name}
+                                </span>
+                              ) : (
+                                <button
+                                  className="btn-secondary"
+                                  style={{ padding: '3px 10px', fontSize: '12px' }}
+                                  onClick={() => handleOpenUnblindModal(rec)}
+                                >
+                                  Unblind
+                                </button>
+                              )
+                            ) : isParticipantBlinding ? (
+                              <PbTreatmentArmCell
+                                treatmentName={rec.treatment_name}
+                                revealed={revealedPbArms[rec.id]}
+                                onView={() => setRevealedPbArms((prev) => ({ ...prev, [rec.id]: true }))}
+                              />
                             ) : (
-                              <button
-                                className="btn-secondary"
-                                style={{ padding: '3px 10px', fontSize: '12px' }}
-                                onClick={() => handleOpenUnblindModal(rec)}
-                              >
-                                Unblind
-                              </button>
+                              <span>{rec.treatment_name}</span>
                             )}
                           </td>
                         </tr>

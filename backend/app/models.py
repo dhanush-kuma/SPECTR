@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, SmallInteger, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .core.blinding_type import BlindingType
 from .database import Base
 
 
@@ -38,8 +39,8 @@ class Study(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     protocol_code: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    blinding_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="Double-Blind"
+    blinding_type: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=BlindingType.PIB
     )
     target_sample_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     randomization_method: Mapped[str] = mapped_column(

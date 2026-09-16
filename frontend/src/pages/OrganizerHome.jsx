@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL } from '../labels'
+import { blindingTypeShortLabel } from '../utils/blindingType'
 
 function OrganizerHome() {
   const navigate = useNavigate()
@@ -143,7 +144,7 @@ function OrganizerHome() {
                         <strong>{study.protocol_code}</strong>
                       </td>
                       <td>{study.title}</td>
-                      <td>{study.blinding_type}</td>
+                      <td>{blindingTypeShortLabel(study.blinding_type)}</td>
                       <td>{study.randomization_method}</td>
                       <td>{study.target_sample_size ?? 'N/A'}</td>
                       <td>

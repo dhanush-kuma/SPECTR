@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
+from ..core.blinding_type import BlindingType, investigator_is_blinded
 from ..core.email import send_unblind_notification
 from ..core.investigator_invite import reset_investigator_password
 from ..core.rate_limit import limiter
@@ -47,13 +48,13 @@ COOKIE_NAME = "investigator_access_token"
 def _investigator_record_out(
     record: RandomizationRecord,
     *,
-    blinding_type: str = "Double-Blind",
+    blinding_type: int = BlindingType.PIB,
     investigator_username: str | None = None,
     investigator_name: str | None = None,
     investigator_email: str | None = None,
 ) -> RandomizationRecordOut:
-    """Hide treatment arm for double-blind records that are still blinded."""
-    show_treatment = blinding_type != "Double-Blind" or not record.blind
+    """Hide treatment arm when the investigator is blinded and the record is still blinded."""
+    show_treatment = not investigator_is_blinded(blinding_type) or not record.blind
     has_assigner = record.assigned_by_investigator_id is not None
     return RandomizationRecordOut(
         id=record.id,
@@ -208,7 +209,7 @@ def get_me(
         trial_id=study.protocol_code if study else "",
         study_title=study.title if study else None,
         study_description=study.description if study else None,
-        blinding_type=study.blinding_type if study else "Double-Blind",
+        blinding_type=study.blinding_type if study else BlindingType.PIB,
         emergency_unblinding_allowed=study.emergency_unblinding_allowed if study else True,
         inclusion_exclusion_criteria=study.inclusion_exclusion_criteria if study else None,
         status=current_investigator.status,
@@ -438,7 +439,7 @@ def get_assignments(
         return []
 
     study = db.query(Study).filter(Study.id == current_investigator.study_id).first()
-    blinding_type = study.blinding_type if study else "Double-Blind"
+    blinding_type = study.blinding_type if study else BlindingType.PIB
 
     records = (
         db.query(RandomizationRecord)
@@ -492,7 +493,12 @@ def unblind_record(
         raise HTTPException(status_code=404, detail="Assigned record not found.")
 
     study = db.query(Study).filter(Study.id == current_investigator.study_id).first()
-    if not study or not study.emergency_unblinding_allowed:
+    if not study or not investigator_is_blinded(study.blinding_type):
+        raise HTTPException(
+            status_code=403,
+            detail="Emergency unblinding is not applicable for this study's blinding type.",
+        )
+    if not study.emergency_unblinding_allowed:
         raise HTTPException(
             status_code=403,
             detail="Emergency unblinding is disabled for this study.",
