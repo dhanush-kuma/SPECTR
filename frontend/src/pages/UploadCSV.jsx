@@ -5,22 +5,22 @@ import Header from '../components/Header'
 
 // --- Sample CSV content (embedded so no static file config needed) ---
 const SAMPLE_CSV_CONTENT = `sequence_number,kit_code,site,strat,treatment_arm
-1,KIT-001,Site 1 - University Hospital,Stratum A,Drug A
-2,KIT-002,Site 1 - University Hospital,Stratum A,Placebo
-3,KIT-003,Site 1 - University Hospital,Stratum A,Drug A
-4,KIT-004,Site 1 - University Hospital,Stratum A,Placebo
-5,KIT-005,Site 1 - University Hospital,Stratum A,Drug A
-6,KIT-006,Site 1 - University Hospital,Stratum B,Drug A
-7,KIT-007,Site 1 - University Hospital,Stratum B,Placebo
-8,KIT-008,Site 1 - University Hospital,Stratum B,Drug A
-9,KIT-009,Site 1 - University Hospital,Stratum B,Placebo
-10,KIT-010,Site 1 - University Hospital,Stratum B,Drug A
-11,KIT-011,Site 2 - Central Laboratory,Stratum A,Drug A
-12,KIT-012,Site 2 - Central Laboratory,Stratum A,Placebo
-13,KIT-013,Site 2 - Central Laboratory,Stratum A,Drug A
-14,KIT-014,Site 2 - Central Laboratory,Stratum B,Drug A
-15,KIT-015,Site 2 - Central Laboratory,Stratum B,Placebo
-16,KIT-016,Site 2 - Central Laboratory,Stratum B,Drug A
+1,TRL-4821,Site 1 - University Hospital,Stratum A,Drug A
+2,TRL-7390,Site 1 - University Hospital,Stratum A,Placebo
+3,TRL-4821,Site 1 - University Hospital,Stratum A,Drug A
+4,TRL-7390,Site 1 - University Hospital,Stratum A,Placebo
+5,TRL-4821,Site 1 - University Hospital,Stratum A,Drug A
+6,TRL-4821,Site 1 - University Hospital,Stratum B,Drug A
+7,TRL-7390,Site 1 - University Hospital,Stratum B,Placebo
+8,TRL-4821,Site 1 - University Hospital,Stratum B,Drug A
+9,TRL-7390,Site 1 - University Hospital,Stratum B,Placebo
+10,TRL-4821,Site 1 - University Hospital,Stratum B,Drug A
+11,TRL-4821,Site 2 - Central Laboratory,Stratum A,Drug A
+12,TRL-7390,Site 2 - Central Laboratory,Stratum A,Placebo
+13,TRL-4821,Site 2 - Central Laboratory,Stratum A,Drug A
+14,TRL-4821,Site 2 - Central Laboratory,Stratum B,Drug A
+15,TRL-7390,Site 2 - Central Laboratory,Stratum B,Placebo
+16,TRL-4821,Site 2 - Central Laboratory,Stratum B,Drug A
 `
 
 function downloadSampleCsv() {
@@ -199,8 +199,9 @@ function UploadCSV() {
                     listed in allocation order.
                   </li>
                   <li>
-                    <code>kit_code</code> — unique identifier for the treatment kit assigned to that slot
-                    (e.g. <code>KIT-001</code>).
+                    <code>kit_code</code> — blinded kit identifier for the treatment arm (e.g.{' '}
+                    <code>TRL-4821</code>, <code>TRL-7390</code>). You may use different identifiers
+                    across sites or strata as needed.
                   </li>
                   <li>
                     <code>site</code> — enrolling site name or code (hospital, clinic, laboratory, etc.).

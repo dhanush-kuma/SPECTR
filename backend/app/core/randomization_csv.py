@@ -3,7 +3,7 @@ Parse a pre-randomized sequence CSV and return validated rows.
 
 Expected columns (case-insensitive, leading/trailing whitespace stripped):
     sequence_number  – positive integer, unique within the file
-    kit_code         – unique treatment kit identifier for the row
+    kit_code         – blinded kit identifier for the treatment arm (e.g. "TRL-4821")
     site             – enrolling site name or code
     strat            – stratum label (column may also be named ``strata``)
     treatment_arm    – display name of the treatment arm (e.g. "Drug A")

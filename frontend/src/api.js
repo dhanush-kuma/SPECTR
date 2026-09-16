@@ -21,6 +21,15 @@ export class CsrfError extends Error {
   }
 }
 
+/** Normalize FastAPI error bodies (string detail or 422 validation array). */
+export function parseApiError(detail) {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail.map((item) => item.msg || item).join(', ')
+  }
+  return null
+}
+
 export function setCsrfToken(token) {
   if (token) {
     sessionStorage.setItem(CSRF_STORAGE_KEY, token)

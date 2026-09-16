@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch, storeCsrfFromResponse } from '../api'
+import { apiFetch, parseApiError, storeCsrfFromResponse } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
 
@@ -35,10 +35,18 @@ function InvestigatorChangePassword() {
         method: 'POST',
         json: { current_password: currentPassword, new_password: newPassword },
       })
-      const data = await res.json()
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        if (!res.ok) {
+          setError('Password change failed. Please try again.')
+          return
+        }
+      }
 
       if (!res.ok) {
-        setError(data.detail || 'Password change failed.')
+        setError(parseApiError(data.detail) || 'Password change failed.')
         return
       }
 
