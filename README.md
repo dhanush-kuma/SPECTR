@@ -6,22 +6,22 @@ Built with **FastAPI** (backend) and **React + Vite** (frontend).
 
 ## Overview
 
-SPECTR eliminates the need for cumbersome physical envelopes and cost-prohibitive enterprise IWRS/RTSM software, delivering instant, tamper-proof treatment allocations directly to point-of-care investigators.
+SPECTR eliminates the need for cumbersome physical envelopes and cost-prohibitive enterprise IWRS/RTSM software, delivering instant, tamper-proof treatment allocations directly to site investigators.
 
 Designed by trial methodologists, it supports:
 
 - **Methodological flexibility** — Import pre-computed stratified block sequences from R, Stata, or SAS, or generate sequences in-app with simple/block randomization and stratification.
 - **Point-of-care allocation** — Site investigators use a fast interface to confirm eligibility, randomize participants, and receive immediate treatment assignments.
-- **Audit trails** — Every allocation is logged with participant IDs, stratum tags, and UTC timestamps. Coordinators and investigators can review and export history in real time.
+- **Audit trails** — Every allocation is logged with participant IDs, stratum tags, and UTC timestamps. Central trial coordinators and site investigators can review and export history in real time.
 - **GCP integrity** — Allocation concealment, database-level concurrency locks, and role-based access control across participating centers.
 
 ## User roles
 
 | Role | Purpose |
 |------|---------|
-| **Admin** | First-run setup; create and manage organizer accounts |
-| **Organizer** | Create studies, configure arms and randomization, onboard investigators |
-| **Investigator** | Randomize eligible participants at the point of care |
+| **Admin** | First-run setup; create and manage central trial coordinator accounts |
+| **Central Trial Coordinator** | Create studies, configure arms and randomization, onboard site investigators |
+| **Site Investigator** | Randomize eligible participants at the point of care |
 
 ## How to use
 
@@ -30,9 +30,9 @@ Designed by trial methodologists, it supports:
 1. Deploy SPECTR and open the home page (`/`).
 2. On first run, complete **First-Run Setup** with the server `SETUP_TOKEN` and create the admin account (password minimum 12 characters).
 3. Log in at `/admin`.
-4. Create organizer accounts for trial coordinators.
+4. Create central trial coordinator accounts.
 
-### 2. Configure a study (Organizer)
+### 2. Configure a study (Central Trial Coordinator)
 
 1. Log in at `/organizer`.
 2. Create a new study with protocol metadata, blinding type, and inclusion/exclusion criteria.
@@ -40,23 +40,23 @@ Designed by trial methodologists, it supports:
 4. Set up randomization using one of:
    - **In-app generation** — Permuted block, simple random, or minimization at `/organizer/studies/{id}/randomization`.
    - **CSV import** — Upload a pre-computed sequence at `/organizer/studies/{id}/upload-csv` (see `backend/sample_randomization.csv` for format).
-5. Add **sites** and **investigators** per site. Credentials (Trial ID, username, temporary password) are emailed automatically when SMTP is configured; otherwise they appear in backend logs during development.
+5. Add **sites** and **site investigators** per site. Credentials (Trial ID, username, temporary password) are emailed automatically when SMTP is configured; otherwise they appear in backend logs during development.
 6. Activate the study when configuration is complete.
 
-### 3. Randomize participants (Investigator)
+### 3. Randomize participants (Site Investigator)
 
 1. Log in at `/investigator/login` with **Trial ID** (study protocol code), **username**, and **password** from the credential email.
 2. Change the temporary password if prompted.
-3. On the investigator home page:
+3. On the site investigator home page:
    - Confirm inclusion/exclusion criteria when configured.
    - Enter or confirm the participant ID.
    - Select the appropriate stratum (if stratified).
    - Submit to receive the next sequential allocation from the concealed sequence.
 4. Export allocation history from the dashboard when needed.
 
-### 4. Monitor and export (Organizer)
+### 4. Monitor and export (Central Trial Coordinator)
 
-From the study home page (`/organizer/studies/{id}/home`), coordinators can:
+From the study home page (`/organizer/studies/{id}/home`), central trial coordinators can:
 
 - Review all randomization records and assignment status.
 - Filter by site, stratum, or assignment state.
@@ -131,13 +131,13 @@ Copy `backend/.env.example` to `backend/.env` and set:
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `SECRET_KEY` | Yes | Strong random key for JWT signing |
 | `SETUP_TOKEN` | Yes | Protects first-run admin setup |
-| `FRONTEND_URL` | Yes | Public URL used in investigator credential emails |
+| `FRONTEND_URL` | Yes | Public URL used in site investigator credential emails |
 | `CORS_ORIGINS` | Yes | Comma-separated allowed frontend origins |
-| `SMTP_*` or `RESEND_API_KEY` | Yes | Email delivery for investigator credentials |
+| `SMTP_*` or `RESEND_API_KEY` | Yes | Email delivery for site investigator credentials |
 
 For cross-domain HTTPS deployments, also set `COOKIE_SECURE=true` and `COOKIE_SAMESITE=none`.
 
-Without SMTP in development, investigator credentials are written to the backend console instead of being emailed.
+Without SMTP in development, site investigator credentials are written to the backend console instead of being emailed.
 
 ### Deploying to Railway
 
