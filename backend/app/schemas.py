@@ -172,8 +172,7 @@ class StudyCreate(BaseModel):
     blinding_type: str = "Double-Blind"
     target_sample_size: Optional[int] = None
     randomization_method: str = "Permuted Block"
-    block_size_min: Optional[int] = None
-    block_size_max: Optional[int] = None
+    block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: bool = True
     treatment_arms: list[TreatmentArmCreate] = []
 
@@ -185,13 +184,6 @@ class StudyCreate(BaseModel):
             raise ValueError("Field cannot be empty")
         return v
 
-    @field_validator("block_size_min", "block_size_max")
-    @classmethod
-    def positive_block_size(cls, v: Optional[int]) -> Optional[int]:
-        if v is not None and v < 1:
-            raise ValueError("Block size must be at least 1")
-        return v
-
 
 class StudyUpdate(BaseModel):
     title: Optional[str] = None
@@ -200,8 +192,7 @@ class StudyUpdate(BaseModel):
     blinding_type: Optional[str] = None
     target_sample_size: Optional[int] = None
     randomization_method: Optional[str] = None
-    block_size_min: Optional[int] = None
-    block_size_max: Optional[int] = None
+    block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: Optional[bool] = None
     status: Optional[str] = None
 
@@ -215,13 +206,6 @@ class StudyUpdate(BaseModel):
             raise ValueError("Protocol code cannot be empty")
         return v
 
-    @field_validator("block_size_min", "block_size_max")
-    @classmethod
-    def positive_block_size(cls, v: Optional[int]) -> Optional[int]:
-        if v is not None and v < 1:
-            raise ValueError("Block size must be at least 1")
-        return v
-
 
 class StudyOut(BaseModel):
     id: int
@@ -232,8 +216,7 @@ class StudyOut(BaseModel):
     blinding_type: str
     target_sample_size: Optional[int] = None
     randomization_method: str
-    block_size_min: Optional[int] = None
-    block_size_max: Optional[int] = None
+    block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: bool
     status: str
     created_at: datetime
@@ -393,8 +376,7 @@ class GenerateRandomizationRequest(BaseModel):
     """
     target_sample_size: Optional[int] = None
     randomization_method: Optional[str] = None
-    block_size_min: Optional[int] = None
-    block_size_max: Optional[int] = None
+    block_size_rules: Optional[str] = None
     random_seed: Optional[str] = None  # user-supplied seed for reproducibility
 
     @field_validator("target_sample_size")
@@ -402,13 +384,6 @@ class GenerateRandomizationRequest(BaseModel):
     def positive_sample_size(cls, v: Optional[int]) -> Optional[int]:
         if v is not None and v < 1:
             raise ValueError("Target sample size must be at least 1")
-        return v
-
-    @field_validator("block_size_min", "block_size_max")
-    @classmethod
-    def positive_block_size(cls, v: Optional[int]) -> Optional[int]:
-        if v is not None and v < 1:
-            raise ValueError("Block size must be at least 1")
         return v
 
 

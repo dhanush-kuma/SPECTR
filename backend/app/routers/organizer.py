@@ -170,6 +170,25 @@ def _ensure_protocol_code_available(
         )
 
 
+def _parse_block_size_rules(rules: str | None) -> tuple[int | None, int | None]:
+    """Parse block size rules like '4' or '4-6' into (min, max) for the engine."""
+    if not rules or not rules.strip():
+        return None, None
+    text = rules.strip()
+    if "-" in text:
+        lo, hi = text.split("-", 1)
+        try:
+            block_min = int(lo.strip())
+            block_max = int(hi.strip())
+        except ValueError:
+            raise ValueError("Block size rules must be a number or min-max range (e.g. '4' or '4-6').")
+        return block_min, block_max
+    try:
+        return int(text), None
+    except ValueError:
+        raise ValueError("Block size rules must be a number or min-max range (e.g. '4' or '4-6').")
+
+
 @router.get("/me", response_model=OrganizerInfo)
 def get_me(
     response: Response,
@@ -326,8 +345,7 @@ def create_study(
         target_sample_size=payload.target_sample_size,
         randomization_method=payload.randomization_method,
         random_seed=None,
-        block_size_min=payload.block_size_min,
-        block_size_max=payload.block_size_max,
+        block_size_rules=payload.block_size_rules.strip() if payload.block_size_rules else None,
         emergency_unblinding_allowed=payload.emergency_unblinding_allowed,
         status="Draft",
     )
@@ -394,7 +412,7 @@ def update_study(
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
 
     if study.status in LOCKED_STATUSES:
-        locked_fields = {"randomization_method", "block_size_min", "block_size_max", "target_sample_size"}
+        locked_fields = {"randomization_method", "block_size_rules", "target_sample_size"}
         if any(k in payload.model_dump(exclude_unset=True) for k in locked_fields):
             raise HTTPException(
                 status_code=400,
@@ -1068,8 +1086,11 @@ def generate_randomization(
     # Merge payload overrides with stored study settings
     n = payload.target_sample_size or study.target_sample_size
     method = payload.randomization_method or study.randomization_method
-    block_min = payload.block_size_min if payload.block_size_min is not None else study.block_size_min
-    block_max = payload.block_size_max if payload.block_size_max is not None else study.block_size_max
+    block_rules = (
+        payload.block_size_rules.strip()
+        if payload.block_size_rules is not None
+        else study.block_size_rules
+    )
     seed = payload.random_seed  # None is fine – engine will auto-generate
 
     # Validation guards
@@ -1086,10 +1107,15 @@ def generate_randomization(
             detail=f"Invalid randomization method '{method}'. Choose from: {', '.join(valid_methods)}.",
         )
 
+    try:
+        block_min, block_max = _parse_block_size_rules(block_rules)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     if method == "Permuted Block" and (block_min is None or block_min < 1):
         raise HTTPException(
             status_code=400,
-            detail="Block size (min) must be set when using Permuted Block randomization.",
+            detail="Block size rules must be set when using Permuted Block randomization (e.g. '4' or '4-6').",
         )
 
     arms = (
@@ -1144,8 +1170,7 @@ def generate_randomization(
     # Persist updated study settings + mark active
     study.target_sample_size = n
     study.randomization_method = method
-    study.block_size_min = block_min
-    study.block_size_max = block_max
+    study.block_size_rules = block_rules
     study.status = "Active"
     study.random_seed = str(seed_used)
 

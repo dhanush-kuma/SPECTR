@@ -1,7 +1,7 @@
 """create_randomization_records_table
 
 Revision ID: a1b2c3d4e5f6
-Revises: f1a2b3c4d5e6
+Revises: b2c3d4e5f6a7
 Create Date: 2026-09-06 00:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = "a1b2c3d4e5f6"
-down_revision: Union[str, Sequence[str], None] = "f1a2b3c4d5e6"
+down_revision: Union[str, Sequence[str], None] = "b2c3d4e5f6a7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -32,22 +32,48 @@ def upgrade() -> None:
         sa.Column("treatment_name", sa.String(length=255), nullable=False),
         sa.Column("assigned_patient_id", sa.String(length=255), nullable=True),
         sa.Column(
-            "assigned_by_doctor_id",
+            "assigned_by_investigator_id",
             sa.Integer(),
-            sa.ForeignKey("doctor.id", ondelete="SET NULL"),
+            sa.ForeignKey("investigator.id", ondelete="SET NULL"),
             nullable=True,
         ),
         sa.Column("assigned_at", sa.DateTime(timezone=True), nullable=True),
-        # A kit code must be globally unique across all studies
-        sa.UniqueConstraint("kit_code", name="uq_randomization_records_kit_code"),
-        # Sequence number must be unique within a study
+        sa.Column(
+            "blind",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("true"),
+        ),
+        sa.Column(
+            "site_id",
+            sa.Integer(),
+            sa.ForeignKey("sites.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "strata_id",
+            sa.Integer(),
+            sa.ForeignKey("stratas.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.UniqueConstraint(
             "study_id",
             "sequence_number",
             name="uq_randomization_records_study_sequence",
         ),
     )
+    op.create_index(
+        "uq_randomization_records_study_patient",
+        "randomization_records",
+        ["study_id", sa.text("lower(assigned_patient_id)")],
+        unique=True,
+        postgresql_where=sa.text("assigned_patient_id IS NOT NULL"),
+    )
 
 
 def downgrade() -> None:
+    op.drop_index(
+        "uq_randomization_records_study_patient",
+        table_name="randomization_records",
+    )
     op.drop_table("randomization_records")

@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { apiFetch } from '../api'
 import Header from '../components/Header'
-import { INVESTIGATOR_LABEL_PLURAL } from '../labels'
-
 const VALID_METHODS = ['Permuted Block', 'Simple Random', 'Minimization']
 
 const METHOD_DESCRIPTIONS = {
@@ -18,9 +16,8 @@ const METHOD_DESCRIPTIONS = {
 /* ──────────────────────────────────────────────
    Confirmation modal
 ────────────────────────────────────────────── */
-function ConfirmGenerateModal({ study, arms, method, targetSampleSize, blockSizeMin, blockSizeMax, onConfirm, onCancel, submitting, error }) {
+function ConfirmGenerateModal({ study, arms, method, targetSampleSize, blockSizeRules, onConfirm, onCancel, submitting, error }) {
   const totalRatio = arms.reduce((s, a) => s + (parseInt(a.allocation_ratio, 10) || 1), 0)
-  const isVariable = blockSizeMax && parseInt(blockSizeMax, 10) > parseInt(blockSizeMin, 10)
 
   return (
     <div className="modal-overlay">
@@ -44,14 +41,8 @@ function ConfirmGenerateModal({ study, arms, method, targetSampleSize, blockSize
           <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
             <div><span style={{ color: '#666' }}>Method: </span><strong>{method}</strong></div>
             <div><span style={{ color: '#666' }}>Sample size: </span><strong>{targetSampleSize}</strong></div>
-            {method === 'Permuted Block' && (
-              <>
-                <div><span style={{ color: '#666' }}>Block min: </span><strong>{blockSizeMin}</strong></div>
-                <div>
-                  <span style={{ color: '#666' }}>Block type: </span>
-                  <strong>{isVariable ? `Variable (${blockSizeMin}–${blockSizeMax})` : `Fixed (${blockSizeMin})`}</strong>
-                </div>
-              </>
+            {method === 'Permuted Block' && blockSizeRules && (
+              <div><span style={{ color: '#666' }}>Block size rules: </span><strong>{blockSizeRules}</strong></div>
             )}
           </div>
         </div>
@@ -107,8 +98,7 @@ function StudyRandomization() {
   // Form state — mirrors study model fields
   const [targetSampleSize, setTargetSampleSize] = useState('')
   const [randomizationMethod, setRandomizationMethod] = useState('Permuted Block')
-  const [blockSizeMin, setBlockSizeMin] = useState('')
-  const [blockSizeMax, setBlockSizeMax] = useState('')
+  const [blockSizeRules, setBlockSizeRules] = useState('')
 
   // UI state
   const [saveError, setSaveError] = useState(null)
@@ -128,8 +118,7 @@ function StudyRandomization() {
           setArms(data.treatment_arms || [])
           setTargetSampleSize(data.target_sample_size ?? '')
           setRandomizationMethod(data.randomization_method ?? 'Permuted Block')
-          setBlockSizeMin(data.block_size_min ?? '')
-          setBlockSizeMax(data.block_size_max ?? '')
+          setBlockSizeRules(data.block_size_rules ?? '')
         }
       })
       .catch(() => navigate('/organizer/home', { replace: true }))
@@ -141,16 +130,6 @@ function StudyRandomization() {
     setSaveError(null)
     setSaveSuccess(false)
 
-    const min = blockSizeMin !== '' ? parseInt(blockSizeMin, 10) : null
-    const max = blockSizeMax !== '' ? parseInt(blockSizeMax, 10) : null
-
-    if (min !== null && min < 1) { setSaveError('Block size min must be at least 1.'); return }
-    if (max !== null && max < 1) { setSaveError('Block size max must be at least 1.'); return }
-    if (min !== null && max !== null && max <= min) {
-      setSaveError('Block size max must be greater than min.')
-      return
-    }
-
     setSaving(true)
     try {
       const res = await apiFetch(`/organizer/studies/${studyId}`, {
@@ -158,8 +137,7 @@ function StudyRandomization() {
         json: {
           target_sample_size: targetSampleSize !== '' ? parseInt(targetSampleSize, 10) : null,
           randomization_method: randomizationMethod,
-          block_size_min: min,
-          block_size_max: max,
+          block_size_rules: blockSizeRules.trim() || null,
         },
       })
       if (!res.ok) {
@@ -186,17 +164,9 @@ function StudyRandomization() {
       setSaveError('A valid Target Sample Size (minimum 1) is required before generating.')
       return
     }
-    if (randomizationMethod === 'Permuted Block') {
-      const min = parseInt(blockSizeMin, 10)
-      if (!blockSizeMin || min < 1) {
-        setSaveError('Block Size (Min) is required for Permuted Block randomization.')
-        return
-      }
-      const max = blockSizeMax !== '' ? parseInt(blockSizeMax, 10) : null
-      if (max !== null && max <= min) {
-        setSaveError('Block Size (Max) must be greater than Block Size (Min).')
-        return
-      }
+    if (randomizationMethod === 'Permuted Block' && !blockSizeRules.trim()) {
+      setSaveError('Block size rules are required for Permuted Block randomization.')
+      return
     }
     if (arms.length === 0) {
       setSaveError('No treatment arms are configured. Return to the Arms page to define them before generating.')
@@ -210,17 +180,13 @@ function StudyRandomization() {
     setGenerateError(null)
     setGenerating(true)
 
-    const min = blockSizeMin !== '' ? parseInt(blockSizeMin, 10) : null
-    const max = blockSizeMax !== '' ? parseInt(blockSizeMax, 10) : null
-
     try {
       const res = await apiFetch(`/organizer/studies/${studyId}/generate-randomization`, {
         method: 'POST',
         json: {
           target_sample_size: parseInt(targetSampleSize, 10),
           randomization_method: randomizationMethod,
-          block_size_min: min,
-          block_size_max: max,
+          block_size_rules: blockSizeRules.trim() || null,
         },
       })
       const data = await res.json()
@@ -325,43 +291,25 @@ function StudyRandomization() {
                   </span>
                 </div>
 
-                {/* Block Size Min — only relevant for Permuted Block */}
+                {/* Block Size Rules — only relevant for Permuted Block */}
                 <div className="field">
-                  <label htmlFor="block-size-min">
-                    Block Size (Min){randomizationMethod === 'Permuted Block' && !isActive && (
+                  <label htmlFor="block-size-rules">
+                    Block Size Rules{randomizationMethod === 'Permuted Block' && !isActive && (
                       <span style={{ color: '#c0392b' }}> *</span>
                     )}
                   </label>
                   <input
-                    id="block-size-min"
-                    type="number"
-                    min="1"
-                    value={blockSizeMin}
+                    id="block-size-rules"
+                    type="text"
+                    value={blockSizeRules}
                     disabled={isActive || randomizationMethod !== 'Permuted Block'}
-                    onChange={(e) => setBlockSizeMin(e.target.value)}
-                    placeholder="e.g. 4"
+                    onChange={(e) => setBlockSizeRules(e.target.value)}
+                    placeholder="e.g. 4 or 4-6"
                   />
                   <span className="field-hint">
                     {randomizationMethod === 'Permuted Block'
-                      ? `Fixed block size, or minimum if using variable blocks. Must be a multiple of total arm weight (${totalRatio > 0 ? totalRatio : 'N/A'}).`
+                      ? `Fixed block size (e.g. 4) or variable range (e.g. 4-6). Must be a multiple of total arm weight (${totalRatio > 0 ? totalRatio : 'N/A'}).`
                       : 'Applicable only for Permuted Block.'}
-                  </span>
-                </div>
-
-                {/* Block Size Max */}
-                <div className="field">
-                  <label htmlFor="block-size-max">Block Size (Max)</label>
-                  <input
-                    id="block-size-max"
-                    type="number"
-                    min="1"
-                    value={blockSizeMax}
-                    disabled={isActive || randomizationMethod !== 'Permuted Block'}
-                    onChange={(e) => setBlockSizeMax(e.target.value)}
-                    placeholder="e.g. 6"
-                  />
-                  <span className="field-hint">
-                    Leave blank to use a fixed block size equal to Min. Set a larger value for variable block sizes, which prevents {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} from predicting upcoming assignments.
                   </span>
                 </div>
               </div>
@@ -450,8 +398,7 @@ function StudyRandomization() {
           arms={arms}
           method={randomizationMethod}
           targetSampleSize={parseInt(targetSampleSize, 10)}
-          blockSizeMin={blockSizeMin !== '' ? parseInt(blockSizeMin, 10) : null}
-          blockSizeMax={blockSizeMax !== '' ? parseInt(blockSizeMax, 10) : null}
+          blockSizeRules={blockSizeRules.trim() || null}
           onConfirm={handleConfirmGenerate}
           onCancel={() => { setShowConfirm(false); setGenerateError(null) }}
           submitting={generating}
