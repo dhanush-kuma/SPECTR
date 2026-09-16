@@ -107,14 +107,14 @@ def send_investigator_credentials(
     is_reset: bool = False,
 ) -> None:
     login_url = f"{FRONTEND_URL.rstrip('/')}/investigator/login"
-    greeting = name.strip() if name and name.strip() else "Investigator"
+    greeting = name.strip() if name and name.strip() else "Site Investigator"
 
     if is_reset:
-        subject = f"Your new investigator password for study: {study_title}"
-        intro = "A new password was requested for your Study Randomizer investigator account."
+        subject = f"Your new 'Site Investigator' password for study: {study_title}"
+        intro = "A new password was requested for your SPECTR 'Site Investigator' account."
     else:
-        subject = f"Your investigator credentials for study: {study_title}"
-        intro = "You have been added as an investigator on a clinical study on Study Randomizer."
+        subject = f"Your 'Site Investigator' credentials for study: {study_title}"
+        intro = "You have been added as a 'Site Investigator' on a clinical study on SPECTR."
 
     body = f"""Hello {greeting},
 
@@ -132,9 +132,9 @@ Login at: {login_url}
 Open the link above to sign in.
 You can change your password after logging in.
 
-If you did not expect this email, please contact the study organizer.
+If you did not expect this email, please contact your 'Central Trial Coordinator' (CTC).
 
-— Study Randomizer
+— SPECTR
 """
 
     send_email(to_email, subject, body)
@@ -149,11 +149,11 @@ def send_organizer_credentials(
     login_url = f"{FRONTEND_URL.rstrip('/')}/organizer/login"
 
     if is_reset:
-        subject = "Your new CTC password for Study Randomizer"
-        intro = "A new password was requested for your Central Trial Coordinator (CTC) account on Study Randomizer."
+        subject = "Your new CTC password for SPECTR"
+        intro = "A new password was requested for your 'Central Trial Coordinator' (CTC) account on SPECTR."
     else:
-        subject = "Your CTC credentials for Study Randomizer"
-        intro = "You have been invited as a Central Trial Coordinator (CTC) on Study Randomizer."
+        subject = "Your CTC credentials for SPECTR"
+        intro = "You have been invited as a 'Central Trial Coordinator' (CTC) on SPECTR."
 
     body = f"""Hello,
 
@@ -169,7 +169,7 @@ You can change your password after logging in.
 
 If you did not request this, please contact your system administrator.
 
-— Study Randomizer
+— SPECTR
 """
 
     send_email(to_email, subject, body)
@@ -196,12 +196,12 @@ def send_unblind_notification(
 
     body = f"""Hello,
 
-An investigator has performed an emergency unblinding on a study assignment.
+A 'Site Investigator' has performed an emergency unblinding on a study assignment.
 
 Study: {study_title}
 Protocol: {protocol_code.strip()}
 
-Investigator:
+'Site Investigator':
   Username : {investigator_username}
   Email    : {investigator_email}
 {name_line}
@@ -212,7 +212,7 @@ Assignment:
 
 This event has been recorded in the audit log.
 
-— Study Randomizer
+— SPECTR
 """
 
     send_email(to_email, subject, body)
