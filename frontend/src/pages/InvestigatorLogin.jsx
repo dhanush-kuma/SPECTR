@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiFetch, parseApiError, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
-import { INVESTIGATOR_LABEL } from '../labels'
+import { INVESTIGATOR_LABEL, ORGANIZER_LABEL } from '../labels'
 
 function InvestigatorLogin() {
   const navigate = useNavigate()
@@ -12,6 +12,27 @@ function InvestigatorLogin() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotUsername, setForgotUsername] = useState('')
+  const [forgotError, setForgotError] = useState(null)
+  const [forgotSuccess, setForgotSuccess] = useState(null)
+  const [forgotSubmitting, setForgotSubmitting] = useState(false)
+
+  function openForgotPassword() {
+    setForgotError(null)
+    setForgotSuccess(null)
+    if (username) {
+      setForgotUsername(username)
+    }
+    setShowForgotPassword(true)
+  }
+
+  function openSignIn() {
+    setForgotError(null)
+    setForgotSuccess(null)
+    setShowForgotPassword(false)
+  }
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -51,6 +72,45 @@ function InvestigatorLogin() {
     }
   }
 
+  async function handleForgotPassword(e) {
+    e.preventDefault()
+    setForgotError(null)
+    setForgotSuccess(null)
+    setForgotSubmitting(true)
+
+    try {
+      const res = await apiFetch('/investigator/forgot-password', {
+        method: 'POST',
+        json: { username: forgotUsername.trim() },
+      })
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        if (!res.ok) {
+          setForgotError('Could not send a new password. Please try again.')
+          return
+        }
+      }
+
+      if (!res.ok) {
+        setForgotError(parseApiError(data.detail) || 'Could not send a new password.')
+        return
+      }
+
+      setForgotSuccess(data.message)
+      setForgotUsername('')
+    } catch (err) {
+      if (err?.name === 'CsrfError') {
+        setForgotError(err.message)
+      } else {
+        setForgotError('Could not connect to backend.')
+      }
+    } finally {
+      setForgotSubmitting(false)
+    }
+  }
+
   return (
     <>
       <Header />
@@ -58,54 +118,110 @@ function InvestigatorLogin() {
       <main className="app">
         <h1>{INVESTIGATOR_LABEL} Login</h1>
 
-        <div className="setup-card">
-          <div className="setup-card__header">
-            <span className="setup-badge">{INVESTIGATOR_LABEL} Portal</span>
-            <h2>Sign In</h2>
-            <p>Enter your username and password to continue.</p>
-          </div>
+        {!showForgotPassword ? (
+          <div className="setup-card">
+            <div className="setup-card__header">
+              <span className="setup-badge">{INVESTIGATOR_LABEL} Portal</span>
+              <h2>Sign In</h2>
+              <p>Enter your username and password to continue.</p>
+            </div>
 
-          <form className="setup-form" onSubmit={handleLogin} noValidate>
-            <div className="field">
-              <label htmlFor="inv-login-username">Username</label>
-              <input
-                id="inv-login-username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. K7M2P9"
-                required
-                autoFocus
-                autoComplete="username"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="inv-login-password">Password</label>
-              <PasswordInput
-                id="inv-login-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-            <div className="field field-checkbox">
-              <label htmlFor="inv-remember-me" className="checkbox-label">
+            <form className="setup-form" onSubmit={handleLogin} noValidate>
+              <div className="field">
+                <label htmlFor="inv-login-username">Username</label>
                 <input
-                  id="inv-remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+                  id="inv-login-username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. K7M2P9"
+                  required
+                  autoFocus
+                  autoComplete="username"
                 />
-                Keep me signed in for 30 days
-              </label>
+              </div>
+              <div className="field">
+                <label htmlFor="inv-login-password">Password</label>
+                <PasswordInput
+                  id="inv-login-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+              <div className="field field-checkbox">
+                <label htmlFor="inv-remember-me" className="checkbox-label">
+                  <input
+                    id="inv-remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  Keep me signed in for 30 days
+                </label>
+              </div>
+              {error && <p className="error">{error}</p>}
+              <button type="submit" className="btn-primary" disabled={submitting}>
+                {submitting ? 'Signing in…' : 'Sign In'}
+              </button>
+
+              <p style={{ marginTop: '12px' }}>
+                <button type="button" className="auth-link" onClick={openForgotPassword}>
+                  Forgot password?
+                </button>
+              </p>
+            </form>
+          </div>
+        ) : (
+          <div className="setup-card">
+            <div className="setup-card__header">
+              <span className="setup-badge">Password Reset</span>
+              <h2>Forgot Password</h2>
+              <p>
+                Enter your username and we will send a new temporary password to the email
+                address on file for that account.
+              </p>
             </div>
-            {error && <p className="error">{error}</p>}
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? 'Signing in…' : 'Sign In'}
-            </button>
-          </form>
-        </div>
+
+            <form className="setup-form" onSubmit={handleForgotPassword} noValidate>
+              <div className="field">
+                <label htmlFor="inv-forgot-username">Username</label>
+                <input
+                  id="inv-forgot-username"
+                  type="text"
+                  value={forgotUsername}
+                  onChange={(e) => setForgotUsername(e.target.value)}
+                  placeholder="e.g. K7M2P9"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <p className="message" style={{ marginTop: 0 }}>
+                If you also forgot your username, contact your {ORGANIZER_LABEL} (Central Trial
+                Coordinator).
+              </p>
+
+              {forgotError && <p className="error">{forgotError}</p>}
+              {forgotSuccess && <p className="success-msg">{forgotSuccess}</p>}
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={forgotSubmitting}
+              >
+                {forgotSubmitting ? 'Sending…' : 'Send New Password'}
+              </button>
+
+              <p style={{ marginTop: '12px' }}>
+                <button type="button" className="auth-link" onClick={openSignIn}>
+                  Sign in
+                </button>
+              </p>
+            </form>
+          </div>
+        )}
       </main>
     </>
   )

@@ -12,6 +12,7 @@ const CSRF_EXEMPT_PATHS = new Set([
   '/organizer/login',
   '/organizer/forgot-password',
   '/investigator/login',
+  '/investigator/forgot-password',
 ])
 
 export class CsrfError extends Error {

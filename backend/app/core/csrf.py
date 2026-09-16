@@ -12,6 +12,7 @@ CSRF_EXEMPT_PATHS = {
     "/organizer/login",
     "/organizer/forgot-password",
     "/investigator/login",
+    "/investigator/forgot-password",
     "/setup",
     "/setup/status",
 }

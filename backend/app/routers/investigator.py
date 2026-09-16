@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
+from ..core.investigator_invite import reset_investigator_password
 from ..core.rate_limit import limiter
 from ..core.study_status import ACTIVE, COMPLETE, GENERATED
 from ..core.security import (
@@ -23,6 +24,7 @@ from ..models import Investigator, RandomizationRecord, Site, Strata, Study
 from ..schemas import (
     AssignKitRequest,
     ChangePasswordRequest,
+    InvestigatorForgotPasswordRequest,
     InvestigatorInfo,
     InvestigatorLoginRequest,
     LoginResponse,
@@ -111,6 +113,48 @@ def login(
         ip=request.client.host if request.client else None,
     )
     return LoginResponse(message="Login successful.", csrf_token=csrf_token)
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("5/hour")
+def forgot_password(
+    request: Request,
+    payload: InvestigatorForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    investigator = (
+        db.query(Investigator)
+        .filter(Investigator.username == payload.username)
+        .first()
+    )
+    if investigator and investigator.status == "revoked":
+        raise HTTPException(
+            status_code=403,
+            detail="Your access has been revoked. Contact your Central Trial Coordinator (CTC).",
+        )
+
+    try:
+        updated = reset_investigator_password(username=payload.username, db=db)
+    except RuntimeError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail="No account found for that username.",
+        )
+
+    db.commit()
+    audit(
+        "investigator.password_reset_requested",
+        username=payload.username,
+        investigator_id=updated.id,
+        ip=request.client.host if request.client else None,
+    )
+    return MessageResponse(
+        message="A new password has been sent to the email address on file for that account."
+    )
 
 
 @router.post("/logout", response_model=MessageResponse)

@@ -20,8 +20,6 @@ from ..core.csv_limits import read_csv_upload_limited
 from ..core.csv_randomization import persist_csv_randomization
 from ..core.randomization_csv import parse_randomization_csv
 from ..core.randomization_engine import generate_sequence
-from ..core.investigators import generate_temp_password
-from ..core.email import send_investigator_credentials
 from ..core.rate_limit import limiter
 from ..core.security import (
     ROLE_ORGANIZER,
@@ -752,64 +750,6 @@ def restore_site_investigator(
         study_id=study_id,
         site_id=site_id,
         organizer=current_organizer.username,
-    )
-    return _investigator_out(investigator)
-
-
-@router.post(
-    "/studies/{study_id}/sites/{site_id}/investigators/{investigator_id}/reset-password",
-    response_model=InvestigatorOut,
-)
-@limiter.limit("10/hour")
-def reset_site_investigator_password(
-    request: Request,
-    study_id: int,
-    site_id: int,
-    investigator_id: int,
-    db: Session = Depends(get_db),
-    current_organizer: Organizer = Depends(get_current_organizer),
-):
-    """Generate a new password for a site investigator and email it."""
-    study = _get_study_for_organizer(study_id, current_organizer.id, db)
-    investigator = _get_investigator_for_site(
-        study_id, site_id, investigator_id, current_organizer.id, db
-    )
-    if investigator.status == "revoked":
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot reset password for a revoked investigator. Restore their access first.",
-        )
-
-    new_password = generate_temp_password()
-    investigator.password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
-    investigator.status = "inactive"
-    bump_investigator_session(investigator)
-    db.flush()
-
-    try:
-        send_investigator_credentials(
-            to_email=investigator.email,
-            name=investigator.name,
-            study_title=study.title,
-            protocol_code=study.protocol_code,
-            username=investigator.username,
-            temp_password=new_password,
-        )
-    except RuntimeError as exc:
-        db.rollback()
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    db.commit()
-    db.refresh(investigator)
-    audit(
-        "investigator.password_reset",
-        investigator_id=investigator.id,
-        study_id=study_id,
-        site_id=site_id,
-        email=investigator.email,
-        organizer=current_organizer.username,
-        ip=request.client.host if request.client else None,
-        email_configured=email_is_configured(),
     )
     return _investigator_out(investigator)
 

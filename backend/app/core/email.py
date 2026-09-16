@@ -103,14 +103,22 @@ def send_investigator_credentials(
     protocol_code: str,
     username: str,
     temp_password: str,
+    *,
+    is_reset: bool = False,
 ) -> None:
     login_url = f"{FRONTEND_URL.rstrip('/')}/investigator/login"
     greeting = name.strip() if name and name.strip() else "Investigator"
 
-    subject = f"Your investigator credentials for study: {study_title}"
+    if is_reset:
+        subject = f"Your new investigator password for study: {study_title}"
+        intro = "A new password was requested for your Study Randomizer investigator account."
+    else:
+        subject = f"Your investigator credentials for study: {study_title}"
+        intro = "You have been added as an investigator on a clinical study on Study Randomizer."
+
     body = f"""Hello {greeting},
 
-You have been added as an investigator on a clinical study on Study Randomizer.
+{intro}
 
 Study: {study_title}
 Protocol: {protocol_code.strip()}

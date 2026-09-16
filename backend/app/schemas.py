@@ -86,6 +86,19 @@ class InvestigatorLoginRequest(BaseModel):
     @classmethod
     def password_bounds(cls, v: str) -> str:
         return validate_login_password(v)
+
+
+class InvestigatorForgotPasswordRequest(BaseModel):
+    username: str
+
+    @field_validator("username")
+    @classmethod
+    def username_normalized(cls, v: str) -> str:
+        v = normalize_investigator_username(v)
+        if not v:
+            raise ValueError("Username cannot be empty")
+        return v
+
 class AdminInfo(BaseModel):
     username: str
     csrf_token: str

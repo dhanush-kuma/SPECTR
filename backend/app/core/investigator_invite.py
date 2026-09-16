@@ -7,9 +7,14 @@ import io
 import bcrypt
 from sqlalchemy.orm import Session
 
+from ..core.security import bump_investigator_session
 from ..models import Investigator, Site, Study
 from .email import send_investigator_credentials
-from .investigators import generate_temp_password, generate_username
+from .investigators import (
+    generate_temp_password,
+    generate_username,
+    normalize_investigator_username,
+)
 from .csv_limits import ensure_csv_size
 from .validators import normalize_email
 
@@ -121,5 +126,45 @@ def create_and_send_investigator_invite(
         protocol_code=study.protocol_code,
         username=username,
         temp_password=temp_password,
+    )
+    return investigator
+
+
+def reset_investigator_password(*, username: str, db: Session) -> Investigator | None:
+    """
+    Generate a new password for an active/inactive investigator and email it.
+    Returns the investigator when successful, None if not found or revoked.
+    Caller is responsible for commit/rollback.
+    """
+    username = normalize_investigator_username(username)
+
+    investigator = (
+        db.query(Investigator)
+        .filter(Investigator.username == username)
+        .first()
+    )
+    if not investigator or investigator.status == "revoked":
+        return None
+
+    study = db.query(Study).filter(Study.id == investigator.study_id).first()
+    if not study:
+        return None
+
+    temp_password = generate_temp_password()
+    investigator.password_hash = bcrypt.hashpw(
+        temp_password.encode(), bcrypt.gensalt()
+    ).decode()
+    investigator.status = "inactive"
+    bump_investigator_session(investigator)
+    db.flush()
+
+    send_investigator_credentials(
+        to_email=investigator.email,
+        name=investigator.name,
+        study_title=study.title,
+        protocol_code=study.protocol_code,
+        username=investigator.username,
+        temp_password=temp_password,
+        is_reset=True,
     )
     return investigator
