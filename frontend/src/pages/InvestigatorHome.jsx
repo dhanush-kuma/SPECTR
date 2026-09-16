@@ -4,6 +4,7 @@ import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 import InclusionExclusionModal from '../components/InclusionExclusionModal'
 import { INVESTIGATOR_LABEL, ORGANIZER_LABEL, PARTICIPANT_LABEL } from '../labels'
+import { downloadCsv, rowsToCsv } from '../utils/csv'
 
 function hasInclusionExclusionCriteria(criteria) {
   if (!criteria) return false
@@ -195,6 +196,44 @@ function InvestigatorHome() {
     } finally {
       setUnblindingSubmitting(false)
     }
+  }
+
+  function getTreatmentArmForExport(rec) {
+    if (!isDoubleBlind) {
+      return rec.treatment_name || ''
+    }
+    if (!rec.blind || unblindedRecords[rec.id]) {
+      return unblindedRecords[rec.id] || rec.treatment_name || ''
+    }
+    return ''
+  }
+
+  function handleExportAssignments() {
+    const headers = [
+      '#',
+      `${PARTICIPANT_LABEL} ID`,
+      'Kit Code',
+      'Assigned By',
+      `${INVESTIGATOR_LABEL} Name`,
+      `${INVESTIGATOR_LABEL} Email`,
+      'Treatment Arm',
+    ]
+
+    const rows = filteredAssignments.map((rec, index) => [
+      index + 1,
+      rec.assigned_patient_id || '',
+      rec.kit_code || '',
+      rec.assigned_by_investigator_username || '',
+      rec.assigned_by_investigator_id ? (rec.assigned_by_investigator_name || '') : '',
+      rec.assigned_by_investigator_id ? (rec.assigned_by_investigator_email || '') : '',
+      getTreatmentArmForExport(rec),
+    ])
+
+    const siteSlug = investigator?.site_name
+      ? investigator.site_name.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '')
+      : 'site'
+    const filename = `${siteSlug}-participant-records.csv`
+    downloadCsv(filename, rowsToCsv(headers, rows))
   }
 
   const isDoubleBlind = investigator?.blinding_type === 'Double-Blind'
@@ -397,21 +436,32 @@ function InvestigatorHome() {
                       ? ` (${filteredAssignments.length} of ${assignedList.length})`
                       : ` (${assignedList.length})`}
                   </h2>
-                  <input
-                    type="text"
-                    placeholder={`Search ${PARTICIPANT_LABEL.toLowerCase()} ID...`}
-                    value={assignmentSearch}
-                    onChange={(e) => setAssignmentSearch(e.target.value)}
-                    className="field input"
-                    style={{
-                      padding: '6px 10px',
-                      fontSize: '13px',
-                      border: '1px solid #b0b0b0',
-                      borderRadius: '3px',
-                      width: '210px',
-                      outline: 'none',
-                    }}
-                  />
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ padding: '6px 12px', fontSize: '13px', whiteSpace: 'nowrap' }}
+                      onClick={handleExportAssignments}
+                      disabled={filteredAssignments.length === 0}
+                    >
+                      Export Site {PARTICIPANT_LABEL} Records
+                    </button>
+                    <input
+                      type="text"
+                      placeholder={`Search ${PARTICIPANT_LABEL.toLowerCase()} ID...`}
+                      value={assignmentSearch}
+                      onChange={(e) => setAssignmentSearch(e.target.value)}
+                      className="field input"
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: '13px',
+                        border: '1px solid #b0b0b0',
+                        borderRadius: '3px',
+                        width: '210px',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {filteredAssignments.length === 0 ? (

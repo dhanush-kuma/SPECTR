@@ -5,7 +5,7 @@ import bcrypt
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
@@ -46,18 +46,26 @@ COOKIE_NAME = "investigator_access_token"
 
 def _investigator_record_out(
     record: RandomizationRecord,
+    *,
+    blinding_type: str = "Double-Blind",
     investigator_username: str | None = None,
+    investigator_name: str | None = None,
+    investigator_email: str | None = None,
 ) -> RandomizationRecordOut:
-    """Hide treatment arm while the record is still blinded."""
+    """Hide treatment arm for double-blind records that are still blinded."""
+    show_treatment = blinding_type != "Double-Blind" or not record.blind
+    has_assigner = record.assigned_by_investigator_id is not None
     return RandomizationRecordOut(
         id=record.id,
         study_id=record.study_id,
         sequence_number=record.sequence_number,
         kit_code=record.kit_code,
-        treatment_name=record.treatment_name if not record.blind else None,
+        treatment_name=record.treatment_name if show_treatment else None,
         assigned_patient_id=record.assigned_patient_id,
         assigned_by_investigator_id=record.assigned_by_investigator_id,
         assigned_by_investigator_username=investigator_username,
+        assigned_by_investigator_name=investigator_name if has_assigner else None,
+        assigned_by_investigator_email=investigator_email if has_assigner else None,
         assigned_at=record.assigned_at,
         blind=record.blind,
     )
@@ -412,7 +420,13 @@ def assign_kit(
         ip=request.client.host if request.client else None,
     )
 
-    return _investigator_record_out(record, current_investigator.username)
+    return _investigator_record_out(
+        record,
+        blinding_type=study.blinding_type,
+        investigator_username=current_investigator.username,
+        investigator_name=current_investigator.name,
+        investigator_email=current_investigator.email,
+    )
 
 
 @router.get("/assignments", response_model=list[RandomizationRecordOut])
@@ -423,8 +437,12 @@ def get_assignments(
     if current_investigator.site_id is None:
         return []
 
+    study = db.query(Study).filter(Study.id == current_investigator.study_id).first()
+    blinding_type = study.blinding_type if study else "Double-Blind"
+
     records = (
         db.query(RandomizationRecord)
+        .options(joinedload(RandomizationRecord.assigned_by_investigator))
         .filter(
             RandomizationRecord.study_id == current_investigator.study_id,
             RandomizationRecord.site_id == current_investigator.site_id,
@@ -435,8 +453,16 @@ def get_assignments(
     )
     res = []
     for r in records:
-        username = r.assigned_by_investigator.username if r.assigned_by_investigator else None
-        res.append(_investigator_record_out(r, username))
+        inv = r.assigned_by_investigator
+        res.append(
+            _investigator_record_out(
+                r,
+                blinding_type=blinding_type,
+                investigator_username=inv.username if inv else None,
+                investigator_name=inv.name if inv else None,
+                investigator_email=inv.email if inv else None,
+            )
+        )
     return res
 
 

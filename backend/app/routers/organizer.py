@@ -128,11 +128,8 @@ def _get_investigator_for_site(
 
 
 def _randomization_record_out(record: RandomizationRecord) -> RandomizationRecordOut:
-    inv_username = (
-        record.assigned_by_investigator.username
-        if record.assigned_by_investigator
-        else None
-    )
+    inv = record.assigned_by_investigator
+    has_assigner = record.assigned_by_investigator_id is not None
     return RandomizationRecordOut(
         id=record.id,
         study_id=record.study_id,
@@ -141,7 +138,9 @@ def _randomization_record_out(record: RandomizationRecord) -> RandomizationRecor
         treatment_name=record.treatment_name,
         assigned_patient_id=record.assigned_patient_id,
         assigned_by_investigator_id=record.assigned_by_investigator_id,
-        assigned_by_investigator_username=inv_username,
+        assigned_by_investigator_username=inv.username if inv else None,
+        assigned_by_investigator_name=inv.name if inv and has_assigner else None,
+        assigned_by_investigator_email=inv.email if inv and has_assigner else None,
         assigned_at=record.assigned_at,
         blind=record.blind,
         site_id=record.site_id,

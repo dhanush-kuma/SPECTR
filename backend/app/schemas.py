@@ -328,6 +328,8 @@ class RandomizationRecordOut(BaseModel):
     assigned_patient_id: Optional[str] = None
     assigned_by_investigator_id: Optional[int] = None
     assigned_by_investigator_username: Optional[str] = None
+    assigned_by_investigator_name: Optional[str] = None
+    assigned_by_investigator_email: Optional[str] = None
     assigned_at: Optional[datetime] = None
     blind: bool = True
     site_id: Optional[int] = None

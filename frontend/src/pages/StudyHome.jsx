@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { apiFetch } from '../api'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL, INVESTIGATOR_LABEL, PARTICIPANT_LABEL, PARTICIPANT_LABEL_PLURAL } from '../labels'
+import { downloadCsv, rowsToCsv } from '../utils/csv'
 
 function StudyHome() {
   const { studyId } = useParams()
@@ -20,6 +21,7 @@ function StudyHome() {
   const [loadingRecords, setLoadingRecords] = useState(false)
   const [sitesData, setSitesData] = useState([])
   const [loadingSites, setLoadingSites] = useState(false)
+  const [exportingRecords, setExportingRecords] = useState(false)
 
   // Fetch Study details
   useEffect(() => {
@@ -85,6 +87,73 @@ function StudyHome() {
   function handlePerPageChange(e) {
     setPerPage(parseInt(e.target.value, 10))
     setPage(1)
+  }
+
+  async function fetchAllRandomizationRecords() {
+    const allRecords = []
+    let currentPage = 1
+    let totalPages = 1
+
+    do {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        per_page: '100',
+      })
+      const res = await apiFetch(`/organizer/studies/${studyId}/randomization-records?${params.toString()}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch randomization records.')
+      }
+      const data = await res.json()
+      allRecords.push(...(data.records || []))
+      totalPages = data.total_pages || 1
+      currentPage += 1
+    } while (currentPage <= totalPages)
+
+    return allRecords
+  }
+
+  async function handleExportRecords() {
+    setExportingRecords(true)
+    try {
+      const records = await fetchAllRandomizationRecords()
+      const headers = [
+        'Seq #',
+        'Kit Code',
+        'Site',
+        'Strata',
+        'Treatment Arm',
+        'Blind Status',
+        `${PARTICIPANT_LABEL} ID`,
+        `${INVESTIGATOR_LABEL} ID`,
+        `${INVESTIGATOR_LABEL} Name`,
+        `${INVESTIGATOR_LABEL} Email`,
+        'Assigned Date',
+      ]
+
+      const rows = records.map((rec) => [
+        rec.sequence_number,
+        rec.kit_code || '',
+        rec.site_name || '',
+        rec.strata_name || '',
+        rec.treatment_name || '',
+        rec.blind ? 'Blinded' : 'Unblinded',
+        rec.assigned_patient_id || '',
+        rec.assigned_by_investigator_username
+          || (rec.assigned_by_investigator_id ? `ID #${rec.assigned_by_investigator_id}` : ''),
+        rec.assigned_by_investigator_id ? (rec.assigned_by_investigator_name || '') : '',
+        rec.assigned_by_investigator_id ? (rec.assigned_by_investigator_email || '') : '',
+        rec.assigned_at ? new Date(rec.assigned_at).toISOString() : '',
+      ])
+
+      const protocolSlug = study?.protocol_code
+        ? study.protocol_code.replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '')
+        : `study-${studyId}`
+      downloadCsv(`${protocolSlug}-randomized-sequence-records.csv`, rowsToCsv(headers, rows))
+    } catch {
+      // Export failed silently; user can retry.
+    } finally {
+      setExportingRecords(false)
+    }
   }
 
   return (
@@ -315,6 +384,16 @@ function StudyHome() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ fontSize: '13px', whiteSpace: 'nowrap' }}
+                        onClick={handleExportRecords}
+                        disabled={exportingRecords || !recordsData?.total_count}
+                      >
+                        {exportingRecords ? 'Exporting…' : 'Export CSV'}
+                      </button>
+
                       {study.status === 'Generated' && (
                         <Link
                           to={`/organizer/studies/${studyId}/upload-csv`}
