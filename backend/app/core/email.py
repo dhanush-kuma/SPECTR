@@ -4,7 +4,6 @@ import smtplib
 import urllib.error
 import urllib.request
 from email.message import EmailMessage
-from urllib.parse import quote
 
 from ..config import (
     FRONTEND_URL,
@@ -105,10 +104,7 @@ def send_investigator_credentials(
     username: str,
     temp_password: str,
 ) -> None:
-    trial_id = protocol_code.strip()
-    login_url = (
-        f"{FRONTEND_URL.rstrip('/')}/investigator/login?tid={quote(trial_id, safe='')}"
-    )
+    login_url = f"{FRONTEND_URL.rstrip('/')}/investigator/login"
     greeting = name.strip() if name and name.strip() else "Investigator"
 
     subject = f"Your investigator credentials for study: {study_title}"
@@ -117,9 +113,9 @@ def send_investigator_credentials(
 You have been added as an investigator on a clinical study on Study Randomizer.
 
 Study: {study_title}
+Protocol: {protocol_code.strip()}
 
 Your login credentials:
-  Trial ID : {trial_id}
   Username : {username}
   Password : {temp_password}
 

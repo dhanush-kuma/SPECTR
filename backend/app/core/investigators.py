@@ -8,26 +8,34 @@ from sqlalchemy.orm import Session
 
 from ..models import Investigator
 
+# Unambiguous charset — no 0/O, 1/I/L.
+INVESTIGATOR_USERNAME_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+INVESTIGATOR_USERNAME_LENGTH = 6
+MAX_USERNAME_ATTEMPTS = 20
 
-def generate_username(study_id: int, db: Session) -> str:
-    """
-    Return the next zero-padded sequential username for the given study.
-    Example: first investigator in any study → "000001", second → "000002", etc.
-    Usernames are unique within a study but the same number can exist across studies.
-    """
-    result = (
-        db.query(Investigator.username)
-        .filter(Investigator.study_id == study_id)
-        .all()
-    )
-    if not result:
-        next_number = 1
-    else:
-        # Usernames are stored as zero-padded strings; convert to int for comparison
-        max_number = max(int(row.username) for row in result)
-        next_number = max_number + 1
 
-    return f"{next_number:06d}"
+def normalize_investigator_username(value: str) -> str:
+    return value.strip().upper()
+
+
+def generate_username(db: Session) -> str:
+    """
+    Return a random alphanumeric username globally unique across all investigators.
+    Example: "K7M2P9", "R3H8WN".
+    """
+    for _ in range(MAX_USERNAME_ATTEMPTS):
+        username = "".join(
+            secrets.choice(INVESTIGATOR_USERNAME_ALPHABET)
+            for _ in range(INVESTIGATOR_USERNAME_LENGTH)
+        )
+        exists = (
+            db.query(Investigator.id)
+            .filter(Investigator.username == username)
+            .first()
+        )
+        if not exists:
+            return username
+    raise RuntimeError("Could not generate a unique investigator username.")
 
 
 def generate_temp_password() -> str:

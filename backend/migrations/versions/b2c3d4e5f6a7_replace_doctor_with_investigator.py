@@ -44,8 +44,8 @@ def upgrade() -> None:
         ),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=True),
-        # Zero-padded sequential number, unique within a study (e.g. "000001")
-        sa.Column("username", sa.String(length=10), nullable=False),
+        # Opaque alphanumeric code, globally unique (e.g. "K7M2P9")
+        sa.Column("username", sa.String(length=8), nullable=False),
         sa.Column("password_hash", sa.String(length=255), nullable=False),
         # inactive → active (first login) → revoked
         sa.Column(
@@ -60,8 +60,7 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("now()"),
         ),
-        # Username is only unique *within* a study
-        sa.UniqueConstraint("study_id", "username", name="uq_investigator_study_username"),
+        sa.UniqueConstraint("username", name="uq_investigator_username"),
     )
 
     # 5. Add the new FK column in randomization_records pointing at investigator

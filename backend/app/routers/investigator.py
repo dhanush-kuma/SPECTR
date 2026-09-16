@@ -64,24 +64,9 @@ def login(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    # Resolve the study by trial_id (= protocol_code)
-    study = db.query(Study).filter(Study.protocol_code == payload.trial_id.strip()).first()
-    if not study:
-        audit(
-            "investigator.login.failed",
-            trial_id=payload.trial_id,
-            reason="study_not_found",
-            ip=request.client.host if request.client else None,
-        )
-        raise HTTPException(status_code=401, detail="Invalid trial ID, username, or password.")
-
-    # Find the investigator by (study_id, username) — username is unique within a study
     investigator = (
         db.query(Investigator)
-        .filter(
-            Investigator.study_id == study.id,
-            Investigator.username == payload.username.strip(),
-        )
+        .filter(Investigator.username == payload.username)
         .first()
     )
 
@@ -90,16 +75,14 @@ def login(
     ):
         audit(
             "investigator.login.failed",
-            trial_id=payload.trial_id,
             username=payload.username,
             ip=request.client.host if request.client else None,
         )
-        raise HTTPException(status_code=401, detail="Invalid trial ID, username, or password.")
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
 
     if investigator.status == "revoked":
         audit(
             "investigator.login.failed",
-            trial_id=payload.trial_id,
             username=payload.username,
             reason="revoked",
             ip=request.client.host if request.client else None,
@@ -111,7 +94,6 @@ def login(
         investigator.status = "active"
         db.commit()
 
-    # JWT sub stores the investigator's DB id (study-unique usernames would collide across studies)
     remember_me = payload.remember_me
     token = create_access_token(
         str(investigator.id),
@@ -125,7 +107,6 @@ def login(
     audit(
         "investigator.login.success",
         investigator_id=investigator.id,
-        trial_id=payload.trial_id,
         username=investigator.username,
         ip=request.client.host if request.client else None,
     )

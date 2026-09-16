@@ -252,7 +252,7 @@ function StudyInvestigators() {
                   <span className="setup-badge">Single Invite</span>
                   <h2>Add site {INVESTIGATOR_LABEL.toLowerCase()}</h2>
                   <p>
-                    The system will generate a username and temporary password and send them
+                    The system will generate a unique username and temporary password and send them
                     to the provided email address. This investigator will be linked to{' '}
                     <strong>{site?.name || 'this site'}</strong>.
                   </p>

@@ -117,8 +117,8 @@ class Investigator(Base):
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    # Zero-padded sequential number unique within a study, e.g. "000001"
-    username: Mapped[str] = mapped_column(String(10), nullable=False)
+    # Opaque alphanumeric login code, globally unique (e.g. "K7M2P9")
+    username: Mapped[str] = mapped_column(String(8), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     # inactive (just created) → active (first login) → revoked
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="inactive")

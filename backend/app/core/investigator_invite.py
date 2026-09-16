@@ -98,7 +98,7 @@ def create_and_send_investigator_invite(
     if active_investigator_exists(site.id, email, db):
         raise DuplicateInvestigatorError(email)
 
-    username = generate_username(study.id, db)
+    username = generate_username(db)
     temp_password = generate_temp_password()
     password_hash = bcrypt.hashpw(temp_password.encode(), bcrypt.gensalt()).decode()
 

@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, field_validator
 
 from .core.validators import normalize_email
+from .core.investigators import normalize_investigator_username
 
 PASSWORD_MIN_LENGTH = 12
 PASSWORD_MAX_LENGTH = 128
@@ -69,23 +70,14 @@ class LoginRequest(BaseModel):
 
 
 class InvestigatorLoginRequest(BaseModel):
-    trial_id: str
     username: str
     password: str
     remember_me: bool = False
 
-    @field_validator("trial_id")
-    @classmethod
-    def trial_id_not_empty(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Trial ID cannot be empty")
-        return v
-
     @field_validator("username")
     @classmethod
-    def username_not_empty(cls, v: str) -> str:
-        v = v.strip()
+    def username_normalized(cls, v: str) -> str:
+        v = normalize_investigator_username(v)
         if not v:
             raise ValueError("Username cannot be empty")
         return v

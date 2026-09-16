@@ -1,26 +1,17 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { apiFetch, setCsrfToken } from '../api'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { apiFetch, parseApiError, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
 import { INVESTIGATOR_LABEL } from '../labels'
 
 function InvestigatorLogin() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-
-  const [trialId, setTrialId] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const trialIdFromLink = Boolean(searchParams.get('tid'))
-
-  useEffect(() => {
-    const tid = searchParams.get('tid')
-    if (tid) setTrialId(tid)
-  }, [searchParams])
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -31,16 +22,23 @@ function InvestigatorLogin() {
       const res = await apiFetch('/investigator/login', {
         method: 'POST',
         json: {
-          trial_id: trialId.trim(),
           username: username.trim(),
           password,
           remember_me: rememberMe,
         },
       })
-      const data = await res.json()
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        if (!res.ok) {
+          setError('Login failed. Please try again.')
+          return
+        }
+      }
 
       if (!res.ok) {
-        setError(data.detail || 'Login failed.')
+        setError(parseApiError(data.detail) || 'Login failed.')
         return
       }
 
@@ -64,23 +62,10 @@ function InvestigatorLogin() {
           <div className="setup-card__header">
             <span className="setup-badge">{INVESTIGATOR_LABEL} Portal</span>
             <h2>Sign In</h2>
-            <p>Enter your trial ID, username, and password to continue.</p>
+            <p>Enter your username and password to continue.</p>
           </div>
 
           <form className="setup-form" onSubmit={handleLogin} noValidate>
-            <div className="field">
-              <label htmlFor="inv-login-trial-id">Trial ID</label>
-              <input
-                id="inv-login-trial-id"
-                type="text"
-                value={trialId}
-                onChange={(e) => setTrialId(e.target.value)}
-                placeholder="e.g. TRL-2024-001"
-                required
-                autoFocus={!trialIdFromLink}
-                autoComplete="off"
-              />
-            </div>
             <div className="field">
               <label htmlFor="inv-login-username">Username</label>
               <input
@@ -88,9 +73,9 @@ function InvestigatorLogin() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. 000001"
+                placeholder="e.g. K7M2P9"
                 required
-                autoFocus={trialIdFromLink}
+                autoFocus
                 autoComplete="username"
               />
             </div>
