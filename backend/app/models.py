@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -50,6 +50,7 @@ class Study(Base):
     emergency_unblinding_allowed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
+    inclusion_exclusion_criteria: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="Draft")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

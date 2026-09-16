@@ -131,21 +131,30 @@ function StudyHome() {
                   )}
                 </p>
 
-                {study.status === 'Draft' && (
-                  <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
-                    Draft Mode — Complete setup to generate randomization
-                  </span>
-                )}
-                {study.status === 'Generated' && (
-                  <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
-                    Randomization sequence loaded — review records below or re-upload CSV to replace
-                  </span>
-                )}
-                {study.status === 'Complete' && (
-                  <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
-                    All sequence records have been assigned — study is complete
-                  </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  {study.status === 'Draft' && (
+                    <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
+                      Draft Mode — Complete setup to generate randomization
+                    </span>
+                  )}
+                  {study.status === 'Generated' && (
+                    <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
+                      Randomization sequence loaded — review records below or re-upload CSV to replace
+                    </span>
+                  )}
+                  {study.status === 'Complete' && (
+                    <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
+                      All sequence records have been assigned — study is complete
+                    </span>
+                  )}
+                  <Link
+                    to={`/organizer/studies/${studyId}/edit`}
+                    className="btn-secondary"
+                    style={{ textDecoration: 'none', fontSize: '12px', padding: '4px 10px' }}
+                  >
+                    Edit
+                  </Link>
+                </div>
               </div>
             </div>
 

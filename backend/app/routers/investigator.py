@@ -197,6 +197,7 @@ def get_me(
         study_description=study.description if study else None,
         blinding_type=study.blinding_type if study else "Double-Blind",
         emergency_unblinding_allowed=study.emergency_unblinding_allowed if study else True,
+        inclusion_exclusion_criteria=study.inclusion_exclusion_criteria if study else None,
         status=current_investigator.status,
         csrf_token=csrf_token,
     )

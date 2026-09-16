@@ -66,6 +66,14 @@ function App() {
         }
       />
       <Route
+        path="/organizer/studies/:studyId/edit"
+        element={
+          <OrganizerProtectedRoute>
+            <CreateStudy />
+          </OrganizerProtectedRoute>
+        }
+      />
+      <Route
         path="/organizer/studies/:studyId/home"
         element={
           <OrganizerProtectedRoute>

@@ -345,6 +345,11 @@ def create_study(
         random_seed=None,
         block_size_rules=payload.block_size_rules.strip() if payload.block_size_rules else None,
         emergency_unblinding_allowed=payload.emergency_unblinding_allowed,
+        inclusion_exclusion_criteria=(
+            payload.inclusion_exclusion_criteria.model_dump()
+            if payload.inclusion_exclusion_criteria
+            else None
+        ),
         status="Draft",
     )
     db.add(study)
@@ -432,6 +437,16 @@ def update_study(
             exclude_study_id=study_id,
         )
         updates["protocol_code"] = updates["protocol_code"].strip()
+    if "title" in updates and updates["title"] is not None:
+        updates["title"] = updates["title"].strip()
+    if "description" in updates:
+        updates["description"] = (
+            updates["description"].strip() if updates["description"] else None
+        )
+    if "inclusion_exclusion_criteria" in updates and updates["inclusion_exclusion_criteria"] is not None:
+        criteria = updates["inclusion_exclusion_criteria"]
+        if hasattr(criteria, "model_dump"):
+            updates["inclusion_exclusion_criteria"] = criteria.model_dump()
     for field, value in updates.items():
         setattr(study, field, value)
     try:

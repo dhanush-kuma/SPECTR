@@ -178,6 +178,11 @@ class TreatmentArmOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InclusionExclusionCriteria(BaseModel):
+    inclusions: list[str] = []
+    exclusions: list[str] = []
+
+
 class StudyCreate(BaseModel):
     title: str
     protocol_code: str
@@ -187,6 +192,7 @@ class StudyCreate(BaseModel):
     randomization_method: str = "Permuted Block"
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: bool = True
+    inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     treatment_arms: list[TreatmentArmCreate] = []
 
     @field_validator("title", "protocol_code")
@@ -207,6 +213,7 @@ class StudyUpdate(BaseModel):
     randomization_method: Optional[str] = None
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: Optional[bool] = None
+    inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     status: Optional[str] = None
 
     @field_validator("protocol_code")
@@ -231,6 +238,7 @@ class StudyOut(BaseModel):
     randomization_method: str
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: bool
+    inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -291,6 +299,7 @@ class InvestigatorInfo(BaseModel):
     study_description: Optional[str] = None
     blinding_type: Optional[str] = None
     emergency_unblinding_allowed: Optional[bool] = None
+    inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     status: str
     csrf_token: str
 

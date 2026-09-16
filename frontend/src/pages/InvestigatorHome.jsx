@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
+import InclusionExclusionModal from '../components/InclusionExclusionModal'
 import { INVESTIGATOR_LABEL, ORGANIZER_LABEL, PARTICIPANT_LABEL } from '../labels'
+
+function hasInclusionExclusionCriteria(criteria) {
+  if (!criteria) return false
+  return (
+    (criteria.inclusions?.length ?? 0) > 0
+    || (criteria.exclusions?.length ?? 0) > 0
+  )
+}
 
 function InvestigatorHome() {
   const navigate = useNavigate()
@@ -18,6 +27,8 @@ function InvestigatorHome() {
   const [assignedList, setAssignedList] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [ieAttested, setIeAttested] = useState(false)
+  const [showIeModal, setShowIeModal] = useState(false)
 
   function loadStrataAvailability() {
     return apiFetch('/investigator/strata-availability')
@@ -72,6 +83,10 @@ function InvestigatorHome() {
       })
       .catch(() => navigate('/investigator/login', { replace: true }))
   }, [navigate])
+
+  useEffect(() => {
+    setIeAttested(false)
+  }, [patientId, selectedStrataId])
 
   async function handleLogout() {
     setLogoutError(null)
@@ -131,6 +146,7 @@ function InvestigatorHome() {
 
       setAssignedRecord(data)
       setPatientId('')
+      setIeAttested(false)
       loadAssignments()
       loadStrataAvailability()
     } catch {
@@ -182,11 +198,33 @@ function InvestigatorHome() {
 
   const isDoubleBlind = investigator?.blinding_type === 'Double-Blind'
   const selectedStrata = strataOptions.find((s) => String(s.id) === String(selectedStrataId))
+  const requiresIeAttestation = hasInclusionExclusionCriteria(
+    investigator?.inclusion_exclusion_criteria
+  )
   const canAssign = Boolean(
     patientId.trim()
     && selectedStrata
     && selectedStrata.unassigned_count > 0
+    && (!requiresIeAttestation || ieAttested)
   )
+
+  function handleIeCheckboxChange() {
+    if (ieAttested) {
+      setIeAttested(false)
+      return
+    }
+    setShowIeModal(true)
+  }
+
+  function handleIeAttest() {
+    setIeAttested(true)
+    setShowIeModal(false)
+  }
+
+  function handleIeDecline() {
+    setIeAttested(false)
+    setShowIeModal(false)
+  }
 
   return (
     <>
@@ -309,6 +347,23 @@ function InvestigatorHome() {
                       Note: {PARTICIPANT_LABEL} ID must be unique within the study to maintain auditability and support emergency unblinding if required.
                     </span>
                   </div>
+
+                  {requiresIeAttestation && (
+                    <div className="field field-full field-checkbox">
+                      <label htmlFor="ie-attest" className="checkbox-label">
+                        <input
+                          id="ie-attest"
+                          type="checkbox"
+                          checked={ieAttested}
+                          onChange={handleIeCheckboxChange}
+                        />
+                        <span>Attest that the patient meets inclusion/exclusion criteria</span>
+                      </label>
+                      <span className="field-hint">
+                        Select to review the study I/E criteria and confirm eligibility before assigning a kit code.
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-actions" style={{ marginTop: '20px' }}>
@@ -382,6 +437,14 @@ function InvestigatorHome() {
           </>
         )}
       </main>
+
+      {showIeModal && (
+        <InclusionExclusionModal
+          criteria={investigator?.inclusion_exclusion_criteria}
+          onAttest={handleIeAttest}
+          onDecline={handleIeDecline}
+        />
+      )}
 
       {/* Emergency Unblinding Modal */}
       {unblindModalRecord && (

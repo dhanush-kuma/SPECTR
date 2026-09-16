@@ -639,6 +639,61 @@
   color: #666;
 }
 
+/* ── Inclusion / Exclusion criteria ───────────────────────── */
+.criteria-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.criteria-column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.criteria-column__header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.criteria-btn {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 4px 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.criteria-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.criteria-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.criteria-textarea {
+  flex: 1;
+  min-height: 56px;
+  width: 100%;
+  resize: vertical;
+  line-height: 1.45;
+}
+
 .back-link {
   font-size: 13px;
   font-weight: 600;
@@ -744,6 +799,69 @@
   width: 90%;
   max-width: 520px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.ie-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.ie-modal-column {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 12px 14px;
+  background: #fafafa;
+}
+
+.ie-modal-column--inclusions {
+  border-color: #b7dfbe;
+  background: #f7fcf8;
+}
+
+.ie-modal-column--exclusions {
+  border-color: #f5c2c2;
+  background: #fef8f8;
+}
+
+.ie-modal-column h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.ie-modal-column--inclusions h4 {
+  color: #1a6b2a;
+}
+
+.ie-modal-column--exclusions h4 {
+  color: #b42318;
+}
+
+.ie-modal-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.ie-modal-list li {
+  margin-bottom: 8px;
+}
+
+.ie-modal-list a {
+  color: #2a6496;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.ie-modal-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
 }
 
 

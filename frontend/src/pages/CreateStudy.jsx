@@ -1,32 +1,19 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { apiFetch, storeCsrfFromResponse } from '../api'
+import { useNavigate, Link, useParams } from 'react-router-dom'
+import { apiFetch, storeCsrfFromResponse, parseApiError } from '../api'
 import Header from '../components/Header'
-import { INVESTIGATOR_LABEL_PLURAL } from '../labels'
-
-function parseApiError(detail) {
-  if (typeof detail === 'string') return detail
-  if (Array.isArray(detail)) {
-    return detail.map((item) => item.msg || item).join(', ')
-  }
-  return null
-}
+import StudyDetailsForm from '../components/StudyDetailsForm'
 
 function CreateStudy() {
+  const { studyId } = useParams()
+  const isEditMode = Boolean(studyId)
   const navigate = useNavigate()
   const [organizer, setOrganizer] = useState(null)
-
-  // Form state
-  const [title, setTitle] = useState('')
-  const [protocolCode, setProtocolCode] = useState('')
-  const [description, setDescription] = useState('')
-  const [blindingType, setBlindingType] = useState('Double-Blind')
-  const [emergencyUnblinding, setEmergencyUnblinding] = useState(true)
-
+  const [study, setStudy] = useState(null)
+  const [loadingStudy, setLoadingStudy] = useState(isEditMode)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Verify session on mount
   useEffect(() => {
     apiFetch('/organizer/me')
       .then((res) => {
@@ -45,32 +32,47 @@ function CreateStudy() {
       .catch(() => navigate('/organizer/login', { replace: true }))
   }, [navigate])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  useEffect(() => {
+    if (!isEditMode) return
+
+    setLoadingStudy(true)
+    apiFetch(`/organizer/studies/${studyId}`)
+      .then((res) => {
+        if (!res.ok) {
+          navigate('/organizer/home', { replace: true })
+          return null
+        }
+        return res.json()
+      })
+      .then((data) => {
+        if (data) setStudy(data)
+      })
+      .catch(() => navigate('/organizer/home', { replace: true }))
+      .finally(() => setLoadingStudy(false))
+  }, [isEditMode, studyId, navigate])
+
+  async function handleSubmit(payload) {
     setError(null)
     setSubmitting(true)
 
-    const payload = {
-      title: title.trim(),
-      protocol_code: protocolCode.trim(),
-      description: description.trim() || null,
-      blinding_type: blindingType,
-      emergency_unblinding_allowed: emergencyUnblinding,
-    }
-
     try {
-      const res = await apiFetch('/organizer/studies/', {
-        method: 'POST',
-        json: payload,
-      })
+      const res = await apiFetch(
+        isEditMode ? `/organizer/studies/${studyId}` : '/organizer/studies/',
+        {
+          method: isEditMode ? 'PATCH' : 'POST',
+          json: payload,
+        }
+      )
       const data = await res.json()
 
       if (!res.ok) {
         const message =
           parseApiError(data.detail) ||
           (res.status === 409
-            ? `A study with protocol code "${protocolCode.trim()}" already exists. Please use a different protocol code.`
-            : 'Failed to create study.')
+            ? `A study with protocol code "${payload.protocol_code}" already exists. Please use a different protocol code.`
+            : isEditMode
+              ? 'Failed to save study.'
+              : 'Failed to create study.')
 
         if (res.status === 409) {
           document.getElementById('protocol-code')?.focus()
@@ -80,9 +82,12 @@ function CreateStudy() {
         return
       }
 
-      // Navigate to the new study's home page
       navigate(`/organizer/studies/${data.id}/home`, {
-        state: { successMsg: `Study "${data.title}" created successfully.` },
+        state: {
+          successMsg: isEditMode
+            ? `Study "${data.title}" updated successfully.`
+            : `Study "${data.title}" created successfully.`,
+        },
       })
     } catch {
       setError('Could not connect to backend.')
@@ -91,20 +96,27 @@ function CreateStudy() {
     }
   }
 
+  const backLink = isEditMode
+    ? `/organizer/studies/${studyId}/home`
+    : '/organizer/home'
+
+  const pageTitle = isEditMode ? 'Edit Study' : 'Create New Study'
+  const isLoading = !organizer || (isEditMode && loadingStudy)
+
   return (
     <>
       <Header />
 
       <main className="app">
         <div className="page-header">
-          <Link to="/organizer/home" className="back-link">
-            ← Back to Studies
+          <Link to={backLink} className="back-link">
+            {isEditMode ? '← Back to Study' : '← Back to Studies'}
           </Link>
-          <h1>Create New Study</h1>
+          <h1>{pageTitle}</h1>
         </div>
 
-        {!organizer ? (
-          <p className="loading">Verifying session…</p>
+        {isLoading ? (
+          <p className="loading">{isEditMode ? 'Loading study…' : 'Verifying session…'}</p>
         ) : (
           <div className="study-form-card">
             <div className="setup-card__header">
@@ -116,106 +128,50 @@ function CreateStudy() {
                 }}
               >
                 <span className="setup-badge">Study Configuration</span>
-                <span className="badge badge--inactive">Status: Draft</span>
+                {isEditMode ? (
+                  <span className={`badge badge--${study.status === 'Draft' ? 'inactive' : 'active'}`}>
+                    Status: {study.status}
+                  </span>
+                ) : (
+                  <span className="badge badge--inactive">Status: Draft</span>
+                )}
               </div>
               <h2 style={{ marginTop: '8px' }}>Trial Metadata &amp; Protocol Settings</h2>
-              <p>Configure basic trial information. You can add treatment arms and randomization settings after creation.</p>
+              <p>
+                {isEditMode
+                  ? 'Update basic trial information. Protocol code must be unique across all studies.'
+                  : 'Configure basic trial information. You can add treatment arms and randomization settings after creation.'}
+              </p>
             </div>
 
-            <form className="setup-form" onSubmit={handleSubmit} noValidate>
-              {error && <p className="error">{error}</p>}
-
-              <div className="form-grid">
-                {/* Title */}
-                <div className="field field-full">
-                  <label htmlFor="study-title">Title / Full Name *</label>
-                  <input
-                    id="study-title"
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. A Multi-Center Double-Blind Trial of Drug X"
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                {/* Protocol Code */}
-                <div className="field">
-                  <label htmlFor="protocol-code">Protocol Code *</label>
-                  <input
-                    id="protocol-code"
-                    type="text"
-                    value={protocolCode}
-                    onChange={(e) => setProtocolCode(e.target.value)}
-                    placeholder="e.g. CT-2026-004"
-                    required
-                  />
-                </div>
-
-                {/* Blinding Type */}
-                <div className="field">
-                  <label htmlFor="blinding-type">Blinding Type</label>
-                  <select
-                    id="blinding-type"
-                    className="select-input"
-                    value={blindingType}
-                    onChange={(e) => setBlindingType(e.target.value)}
-                  >
-                    <option value="Double-Blind">Double-Blind</option>
-                    <option value="Single-Blind">Single-Blind</option>
-                    <option value="Open-Label">Open-Label</option>
-                  </select>
-                </div>
-
-                {/* Description */}
-                <div className="field field-full">
-                  <label htmlFor="study-description">Description / Summary</label>
-                  <textarea
-                    id="study-description"
-                    className="textarea-input"
-                    rows={3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief overview of the trial's objective and methodology..."
-                  />
-                </div>
-
-                {/* Emergency Unblinding Allowed */}
-                <div className="field field-full field-checkbox">
-                  <label htmlFor="unblinding-allowed" className="checkbox-label">
-                    <input
-                      id="unblinding-allowed"
-                      type="checkbox"
-                      checked={emergencyUnblinding}
-                      onChange={(e) => setEmergencyUnblinding(e.target.checked)}
-                    />
-                    <span>Emergency Unblinding Allowed</span>
-                  </label>
-                  <span className="field-hint">
-                    Permits {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} to perform code-breaks in emergency situations.
-                  </span>
-                </div>
-              </div>
-
-              <div className="form-actions" style={{ marginTop: '24px' }}>
-                <button
-                  id="btn-create-study-submit"
-                  type="submit"
-                  className="btn-primary"
-                  disabled={submitting}
-                >
-                  {submitting ? 'Creating Study…' : 'Create Study'}
-                </button>
+            <StudyDetailsForm
+              key={isEditMode ? `${study.id}-${study.updated_at}` : 'create'}
+              defaultValues={
+                isEditMode
+                  ? {
+                      title: study.title,
+                      protocolCode: study.protocol_code,
+                      description: study.description ?? '',
+                      blindingType: study.blinding_type,
+                      emergencyUnblinding: study.emergency_unblinding_allowed,
+                      inclusionExclusionCriteria: study.inclusion_exclusion_criteria,
+                    }
+                  : undefined
+              }
+              onSubmit={handleSubmit}
+              submitLabel={isEditMode ? 'Save Changes' : 'Create Study'}
+              submitting={submitting}
+              error={error}
+              cancelLink={
                 <Link
-                  to="/organizer/home"
+                  to={backLink}
                   className="btn-secondary"
                   style={{ textDecoration: 'none' }}
                 >
                   Cancel
                 </Link>
-              </div>
-            </form>
+              }
+            />
           </div>
         )}
       </main>
