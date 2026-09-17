@@ -34,11 +34,10 @@ Designed by trial methodologists, it supports:
 
 ### 2. Configure a study (Central Trial Coordinator)
 
-1. Log in at `/organizer`.
+1. Log in at `/Central Trial Coordinator (CTC)`.
 2. Create a new study with protocol metadata, blinding type, and inclusion/exclusion criteria.
-3. Define **treatment arms** and allocation ratios at `/organizer/studies/{id}/arms`.
+3. Define **treatment arms** and allocation ratios at `/Central Trial Coordinator (CTC)/studies/{id}/arms`.
 4. Set up randomization using one of:
-   - **In-app generation** — Permuted block, simple random, or minimization at `/organizer/studies/{id}/randomization`.
    - **CSV import** — Upload a pre-computed sequence at `/organizer/studies/{id}/upload-csv` (see `backend/sample_randomization.csv` for format).
 5. Add **sites** and **site investigators** per site. Credentials (Trial ID, username, temporary password) are emailed automatically when SMTP is configured; otherwise they appear in backend logs during development.
 6. Activate the study when configuration is complete.
