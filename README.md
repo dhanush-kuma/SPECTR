@@ -175,8 +175,6 @@ A free open-source tool by MM Medical Research (OPC) Pvt. Ltd., Cherthala, Keral
 
 ## License
 
-## License
-
 SPECTR: Secure Point-of-care Enrollment and Centralized Trial Randomization  
 Copyright (C) 2026 Manakkodam Manu Medical Research (OPC) Pvt. Ltd.
 
