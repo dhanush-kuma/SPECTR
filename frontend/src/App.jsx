@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 
 import Home from './pages/Home'
+import TermsOfService from './pages/TermsOfService'
 import AdminGuard from './pages/AdminGuard'
 import AdminLogin from './pages/AdminLogin'
 import AdminHome from './pages/AdminHome'
@@ -27,6 +28,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/terms" element={<TermsOfService />} />
 
       <Route path="/admin" element={<AdminGuard />} />
       <Route path="/admin/login" element={<AdminLogin />} />

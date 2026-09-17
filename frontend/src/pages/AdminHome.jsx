@@ -4,6 +4,12 @@ import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL, ORGANIZER_LABEL_PLURAL } from '../labels'
 
+const ORGANIZER_STATUS_LABELS = {
+  active: { label: 'Active', cls: 'badge--active' },
+  inactive: { label: 'Inactive', cls: 'badge--inactive' },
+  disabled: { label: 'Disabled', cls: 'badge--disabled' },
+}
+
 function AdminHome() {
   const navigate = useNavigate()
   const [admin, setAdmin] = useState(null)
@@ -187,44 +193,56 @@ function AdminHome() {
                   </tr>
                 </thead>
                 <tbody>
-                  {organizers.map((org) => (
+                  {organizers.map((org) => {
+                    const status = ORGANIZER_STATUS_LABELS[org.status] || {
+                      label: org.status,
+                      cls: 'badge--inactive',
+                    }
+                    const canToggle = org.status === 'active' || org.status === 'disabled'
+
+                    return (
                     <tr key={org.id}>
                       <td>{org.id}</td>
                       <td>{org.username}</td>
                       <td>
-                        <span className={`badge badge--${org.is_active ? 'active' : 'inactive'}`}>
-                          {org.is_active ? 'Active' : 'Inactive'}
+                        <span className={`badge ${status.cls}`}>
+                          {status.label}
                         </span>
                       </td>
                       <td>
-                        <button
-                          className={org.is_active ? 'btn-danger' : 'btn-restore'}
-                          disabled={togglingId === org.id}
-                          onClick={async () => {
-                            setTogglingId(org.id)
-                            try {
-                              const res = await apiFetch(
-                                `/admin/organizers/${org.id}/status`,
-                                { method: 'PATCH' }
-                              )
-                              if (res.ok) {
-                                const updated = await res.json()
-                                setOrganizers((prev) =>
-                                  prev.map((o) => (o.id === updated.id ? updated : o))
+                        {canToggle ? (
+                          <button
+                            className={org.status === 'active' ? 'btn-danger' : 'btn-restore'}
+                            disabled={togglingId === org.id}
+                            onClick={async () => {
+                              setTogglingId(org.id)
+                              try {
+                                const res = await apiFetch(
+                                  `/admin/organizers/${org.id}/status`,
+                                  { method: 'PATCH' }
                                 )
+                                if (res.ok) {
+                                  const updated = await res.json()
+                                  setOrganizers((prev) =>
+                                    prev.map((o) => (o.id === updated.id ? updated : o))
+                                  )
+                                }
+                              } finally {
+                                setTogglingId(null)
                               }
-                            } finally {
-                              setTogglingId(null)
-                            }
-                          }}
-                        >
-                          {togglingId === org.id
-                            ? '…'
-                            : org.is_active ? 'Disable' : 'Enable'}
-                        </button>
+                            }}
+                          >
+                            {togglingId === org.id
+                              ? '…'
+                              : org.status === 'active' ? 'Disable' : 'Enable'}
+                          </button>
+                        ) : (
+                          <span className="table-muted">Pending ToS</span>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
               </div>

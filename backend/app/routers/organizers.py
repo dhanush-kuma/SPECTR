@@ -6,6 +6,10 @@ from ..core.organizer_invite import (
     DuplicateOrganizerError,
     create_and_send_organizer_invite,
 )
+from ..core.organizer_terms import (
+    get_organizer_account_status,
+    organizer_has_accepted_terms,
+)
 from ..core.rate_limit import limiter
 from ..core.security import bump_organizer_session, get_current_admin
 from ..database import get_db
@@ -13,6 +17,19 @@ from ..models import Admin, Organizer
 from ..schemas import InviteOrganizerRequest, OrganizerOut
 
 router = APIRouter(prefix="/admin/organizers", tags=["organizers"])
+
+
+def _organizer_out(organizer: Organizer, db: Session) -> OrganizerOut:
+    has_accepted_terms = organizer_has_accepted_terms(db, organizer.id)
+    return OrganizerOut(
+        id=organizer.id,
+        username=organizer.username,
+        is_active=organizer.is_active,
+        status=get_organizer_account_status(
+            organizer,
+            has_accepted_terms=has_accepted_terms,
+        ),
+    )
 
 
 @router.post("/", response_model=OrganizerOut, status_code=201)
@@ -41,7 +58,7 @@ def invite_organizer(
         organizer=organizer.username,
         admin=current_admin.username,
     )
-    return organizer
+    return _organizer_out(organizer, db)
 
 
 @router.get("/", response_model=list[OrganizerOut])
@@ -49,7 +66,8 @@ def list_organizers(
     db: Session = Depends(get_db),
     _: Admin = Depends(get_current_admin),
 ):
-    return db.query(Organizer).order_by(Organizer.created_at.desc()).all()
+    organizers = db.query(Organizer).order_by(Organizer.created_at.desc()).all()
+    return [_organizer_out(organizer, db) for organizer in organizers]
 
 
 @router.patch("/{organizer_id}/status", response_model=OrganizerOut)
@@ -75,4 +93,4 @@ def toggle_organizer_status(
         is_active=organizer.is_active,
         admin=current_admin.username,
     )
-    return organizer
+    return _organizer_out(organizer, db)

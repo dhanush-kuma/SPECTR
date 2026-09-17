@@ -675,6 +675,17 @@
   border: 1px solid #d0d0d0;
 }
 
+.badge--disabled {
+  color: #8a1f1f;
+  background: #fdecea;
+  border: 1px solid #f5c2c0;
+}
+
+.table-muted {
+  color: #888;
+  font-size: 12px;
+}
+
 /* ── Table action buttons ─────────────────────────────────── */
 .btn-danger,
 .btn-restore {
@@ -1000,6 +1011,160 @@
   background: #ffffff;
 }
 
+/* ── Terms of Service document ────────────────────────────── */
+.app--legal {
+  max-width: 860px;
+}
+
+.legal-page {
+  background: #ffffff;
+  border: 1px solid #d8dce3;
+  border-radius: 6px;
+  padding: 40px 48px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+.tos-document {
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.tos-document__header {
+  text-align: center;
+  padding-bottom: 28px;
+  margin-bottom: 28px;
+  border-bottom: 2px solid #1a1a2e;
+}
+
+.tos-document__title {
+  margin: 0 0 10px;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.tos-document__subtitle {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.tos-document__meta {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.tos-document__meta a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.tos-document__meta a:hover {
+  text-decoration: underline;
+}
+
+.tos-document__notice {
+  background: #fff8e6;
+  border: 1px solid #f0d78c;
+  border-left: 4px solid #d97706;
+  border-radius: 4px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+}
+
+.tos-document__notice-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #92400e;
+}
+
+.tos-document__notice p {
+  margin: 0;
+  color: #78350f;
+}
+
+.tos-document__section {
+  margin-bottom: 28px;
+}
+
+.tos-document__section:last-child {
+  margin-bottom: 0;
+}
+
+.tos-document__section h2 {
+  margin: 0 0 14px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tos-document__section h3 {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.tos-document__section p {
+  margin: 0 0 12px;
+}
+
+.tos-document__section p:last-child {
+  margin-bottom: 0;
+}
+
+.tos-document__section ul {
+  margin: 0 0 12px;
+  padding-left: 1.4rem;
+}
+
+.tos-document__section li {
+  margin-bottom: 6px;
+}
+
+.tos-modal .modal-box__scroll {
+  padding: 32px 36px 20px;
+}
+
+.tos-modal__footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.tos-modal__acceptance {
+  width: 100%;
+}
+
+.tos-modal__checkbox {
+  align-items: flex-start;
+  line-height: 1.45;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.tos-modal__error {
+  margin: 10px 0 0;
+}
+
+.tos-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  width: 100%;
+}
+
 .ie-modal-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1309,6 +1474,23 @@
     width: 100%;
     text-align: center;
     box-sizing: border-box;
+  }
+
+  .legal-page {
+    padding: 24px 20px;
+  }
+
+  .tos-modal .modal-box__scroll {
+    padding: 24px 20px 16px;
+  }
+
+  .tos-document__title {
+    font-size: 1.3rem;
+  }
+
+  .tos-modal__actions .btn-primary,
+  .tos-modal__actions .btn-secondary {
+    width: 100%;
   }
 }
 

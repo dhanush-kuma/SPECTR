@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..models import Organizer
 from .email import send_organizer_credentials
 from .investigators import generate_temp_password
+from .organizer_terms import organizer_has_accepted_terms
 from .security import bump_organizer_session
 from .validators import normalize_email
 
@@ -44,7 +45,7 @@ def create_and_send_organizer_invite(*, email: str, db: Session) -> Organizer:
     organizer = Organizer(
         username=email,
         password_hash=password_hash,
-        is_active=True,
+        is_active=False,
     )
     db.add(organizer)
     db.flush()
@@ -65,7 +66,9 @@ def reset_organizer_password(*, email: str, db: Session) -> bool:
     email = normalize_email(email)
 
     organizer = db.query(Organizer).filter(Organizer.username == email).first()
-    if not organizer or not organizer.is_active:
+    if not organizer:
+        return False
+    if not organizer.is_active and organizer_has_accepted_terms(db, organizer.id):
         return False
 
     temp_password = generate_temp_password()

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiFetch, bootstrapCsrf, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
+import TermsOfServiceModal from '../components/TermsOfServiceModal'
 import { ORGANIZER_LABEL } from '../labels'
 
 function OrganizerLogin() {
@@ -12,6 +13,8 @@ function OrganizerLogin() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
@@ -58,8 +61,53 @@ function OrganizerLogin() {
         }
       }
 
+      if (res.status === 403 && data.detail?.includes('Terms of service')) {
+        setShowTerms(true)
+        setTermsAccepted(false)
+        setError(null)
+        return
+      }
+
       if (!res.ok) {
         setError(data.detail || 'Login failed.')
+        return
+      }
+
+      setCsrfToken(data.csrf_token)
+      navigate('/organizer/home', { replace: true })
+    } catch {
+      setError('Could not connect to backend.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleAcceptTerms() {
+    if (!termsAccepted) {
+      setError('You must accept the terms of service to continue.')
+      return
+    }
+
+    setError(null)
+    setSubmitting(true)
+
+    try {
+      const res = await apiFetch('/organizer/accept-terms', {
+        method: 'POST',
+        json: { username, password, remember_me: rememberMe },
+      })
+      let data = {}
+      try {
+        data = await res.json()
+      } catch {
+        if (!res.ok) {
+          setError('Could not accept terms. Please try again.')
+          return
+        }
+      }
+
+      if (!res.ok) {
+        setError(data.detail || 'Could not accept terms.')
         return
       }
 
@@ -227,6 +275,21 @@ function OrganizerLogin() {
           </div>
         )}
       </main>
+
+      {showTerms && (
+        <TermsOfServiceModal
+          termsAccepted={termsAccepted}
+          onTermsAcceptedChange={setTermsAccepted}
+          accepting={submitting}
+          error={error}
+          onAccept={handleAcceptTerms}
+          onDecline={() => {
+            setShowTerms(false)
+            setTermsAccepted(false)
+            setError(null)
+          }}
+        />
+      )}
     </>
   )
 }

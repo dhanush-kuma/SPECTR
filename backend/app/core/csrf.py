@@ -11,6 +11,7 @@ CSRF_EXEMPT_PATHS = {
     "/csrf",
     "/admin/login",
     "/organizer/login",
+    "/organizer/accept-terms",
     "/investigator/login",
     "/setup",
     "/setup/status",

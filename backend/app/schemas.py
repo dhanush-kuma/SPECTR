@@ -140,8 +140,20 @@ class OrganizerOut(BaseModel):
     id: int
     username: str
     is_active: bool
+    status: str
 
     model_config = {"from_attributes": True}
+
+
+class AcceptTermsRequest(BaseModel):
+    username: str
+    password: str
+    remember_me: bool = False
+
+    @field_validator("password")
+    @classmethod
+    def password_bounds(cls, v: str) -> str:
+        return validate_login_password(v)
 
 
 class OrganizerInfo(BaseModel):

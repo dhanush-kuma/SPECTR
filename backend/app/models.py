@@ -28,6 +28,26 @@ class Organizer(Base):
     )
 
     studies: Mapped[list["Study"]] = relationship("Study", back_populates="organizer")
+    terms_acceptances: Mapped[list["OrganizerTermsAcceptance"]] = relationship(
+        "OrganizerTermsAcceptance", back_populates="organizer"
+    )
+
+
+class OrganizerTermsAcceptance(Base):
+    __tablename__ = "organizer_terms_acceptances"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    organizer_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("organizer.id", ondelete="CASCADE"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    tos_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    accepted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    organizer: Mapped["Organizer"] = relationship("Organizer", back_populates="terms_acceptances")
 
 
 class Study(Base):

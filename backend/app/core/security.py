@@ -8,6 +8,10 @@ from sqlalchemy.orm import Session
 from ..config import JWT_AUDIENCE, JWT_ISSUER, SECRET_KEY
 from ..database import get_db
 from ..models import Admin, Investigator, Organizer, RevokedToken
+from .organizer_terms import (
+    ORGANIZER_DISABLED_MESSAGE,
+    organizer_has_accepted_terms,
+)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
@@ -148,8 +152,10 @@ def get_current_organizer(
     )
     if not organizer:
         raise HTTPException(status_code=401, detail="Organizer not found.")
+    if not organizer_has_accepted_terms(db, organizer.id):
+        raise HTTPException(status_code=401, detail="Organizer account is not active.")
     if not organizer.is_active:
-        raise HTTPException(status_code=401, detail="Organizer account is deactivated.")
+        raise HTTPException(status_code=401, detail=ORGANIZER_DISABLED_MESSAGE)
 
     payload = decode_token(organizer_access_token) if organizer_access_token else None
     token_session_version = payload.get("sv") if payload else None

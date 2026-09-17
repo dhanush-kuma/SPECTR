@@ -15,6 +15,12 @@ from ..core.investigator_invite import (
     parse_investigator_csv,
 )
 from ..core.organizer_invite import reset_organizer_password
+from ..core.organizer_terms import (
+    ORGANIZER_DISABLED_MESSAGE,
+    TERMS_REQUIRED_MESSAGE,
+    organizer_has_accepted_terms,
+    record_organizer_terms_acceptance,
+)
 from ..core.validators import normalize_email
 from ..core.csv_limits import read_csv_upload_limited
 from ..core.csv_randomization import persist_csv_randomization
@@ -35,6 +41,7 @@ from ..core.study_status import CSV_REUPLOAD_BLOCKED_STATUSES, GENERATED, LOCKED
 from ..database import get_db
 from ..models import Investigator, Organizer, RandomizationRecord, Site, Strata, Study, TreatmentArm
 from ..schemas import (
+    AcceptTermsRequest,
     BulkInviteResponse,
     BulkInviteRowResult,
     ChangePasswordRequest,
@@ -66,6 +73,24 @@ INVALID_ORGANIZER_CREDENTIALS = "Invalid email or password."
 GENERIC_ORGANIZER_RESET_MESSAGE = (
     "If an account exists for that email, a new password has been sent."
 )
+
+
+def _issue_organizer_session(
+    *,
+    organizer: Organizer,
+    response: Response,
+    remember_me: bool,
+) -> LoginResponse:
+    token = create_access_token(
+        organizer.username,
+        ROLE_ORGANIZER,
+        session_version=organizer.session_version,
+        remember_me=remember_me,
+    )
+    cookie_max_age = cookie_max_age_for_access_token(token)
+    set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
+    csrf_token = set_csrf_cookie(response, cookie_max_age)
+    return LoginResponse(message="Login successful.", csrf_token=csrf_token)
 
 
 def _get_study_for_organizer(study_id: int, organizer_id: int, db: Session) -> Study:
@@ -218,7 +243,6 @@ def login(
     organizer = db.query(Organizer).filter(Organizer.username == username).first()
     if (
         not organizer
-        or not organizer.is_active
         or not bcrypt.checkpw(
             payload.password.encode(), organizer.password_hash.encode()
         )
@@ -230,22 +254,95 @@ def login(
         )
         raise HTTPException(status_code=401, detail=INVALID_ORGANIZER_CREDENTIALS)
 
-    remember_me = payload.remember_me
-    token = create_access_token(
-        organizer.username,
-        ROLE_ORGANIZER,
-        session_version=organizer.session_version,
-        remember_me=remember_me,
-    )
-    cookie_max_age = cookie_max_age_for_access_token(token)
-    set_auth_cookie(response, COOKIE_NAME, token, cookie_max_age)
-    csrf_token = set_csrf_cookie(response, cookie_max_age)
+    has_accepted_terms = organizer_has_accepted_terms(db, organizer.id)
+    if has_accepted_terms and not organizer.is_active:
+        audit(
+            "organizer.login.failed",
+            username=organizer.username,
+            ip=request.client.host if request.client else None,
+            reason="disabled",
+        )
+        raise HTTPException(status_code=401, detail=ORGANIZER_DISABLED_MESSAGE)
+
+    if not has_accepted_terms:
+        audit(
+            "organizer.login.terms_required",
+            username=organizer.username,
+            ip=request.client.host if request.client else None,
+        )
+        raise HTTPException(status_code=403, detail=TERMS_REQUIRED_MESSAGE)
+
     audit(
         "organizer.login.success",
         username=organizer.username,
         ip=request.client.host if request.client else None,
     )
-    return LoginResponse(message="Login successful.", csrf_token=csrf_token)
+    return _issue_organizer_session(
+        organizer=organizer,
+        response=response,
+        remember_me=payload.remember_me,
+    )
+
+
+@router.post("/accept-terms", response_model=LoginResponse)
+@limiter.limit("5/minute")
+def accept_terms(
+    request: Request,
+    payload: AcceptTermsRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    try:
+        username = normalize_email(payload.username)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="A valid email address is required.") from exc
+
+    organizer = db.query(Organizer).filter(Organizer.username == username).first()
+    if (
+        not organizer
+        or not bcrypt.checkpw(
+            payload.password.encode(), organizer.password_hash.encode()
+        )
+    ):
+        audit(
+            "organizer.terms_acceptance.failed",
+            username=payload.username,
+            ip=request.client.host if request.client else None,
+        )
+        raise HTTPException(status_code=401, detail=INVALID_ORGANIZER_CREDENTIALS)
+
+    if organizer_has_accepted_terms(db, organizer.id):
+        if not organizer.is_active:
+            raise HTTPException(status_code=401, detail=ORGANIZER_DISABLED_MESSAGE)
+        audit(
+            "organizer.login.success",
+            username=organizer.username,
+            ip=request.client.host if request.client else None,
+            terms_already_accepted=True,
+        )
+        return _issue_organizer_session(
+            organizer=organizer,
+            response=response,
+            remember_me=payload.remember_me,
+        )
+
+    record_organizer_terms_acceptance(
+        organizer=organizer,
+        db=db,
+        ip_address=request.client.host if request.client else None,
+    )
+    db.commit()
+    db.refresh(organizer)
+    audit(
+        "organizer.terms_accepted",
+        username=organizer.username,
+        ip=request.client.host if request.client else None,
+    )
+    return _issue_organizer_session(
+        organizer=organizer,
+        response=response,
+        remember_me=payload.remember_me,
+    )
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
