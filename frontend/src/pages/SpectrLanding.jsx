@@ -31,9 +31,7 @@ function SpectrLanding() {
             Generate complex, customized randomization schedules offline using your preferred
             biostatistical workflows (e.g., R, Stata, SAS) with permuted blocks of varying sizes
             and multi-level stratification (by study center, age, clinical severity). Simply
-            import your pre-computed sequences into SPECTR. Or you may use our inhouse random
-            sequence generator, designed for multicentric trials, with simple/block
-            randomisation with stratification.
+            import your pre-computed sequences into SPECTR.
           </p>
         </div>
 
