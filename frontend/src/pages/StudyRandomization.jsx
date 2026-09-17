@@ -320,7 +320,8 @@ function StudyRandomization() {
                   <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: '#666', marginBottom: '8px' }}>
                     Configured Treatment Arms
                   </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <div className="table-scroll">
+                  <table className="data-table" style={{ fontSize: '13px' }}>
                     <thead>
                       <tr style={{ background: '#f8f9fa', borderBottom: '1px solid #d0d0d0' }}>
                         <th style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 600, color: '#444', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
@@ -342,6 +343,7 @@ function StudyRandomization() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                   {!isActive && (
                     <div style={{ marginTop: '6px', textAlign: 'right' }}>
                       <Link to={`/organizer/studies/${studyId}/arms`} style={{ fontSize: '12px', color: '#2a6496', textDecoration: 'none', fontWeight: 600 }}>

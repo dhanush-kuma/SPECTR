@@ -276,7 +276,7 @@ function StudyHome() {
               <>
                 {/* Stats Summary Cards */}
                 {recordsData && (
-                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${recordsData.unblinded_count > 0 ? 4 : 3}, 1fr)`, gap: '16px', marginBottom: '24px' }}>
+                  <div className={`stats-grid${recordsData.unblinded_count > 0 ? ' stats-grid--cols-4' : ''}`}>
                     <div className="status-card" style={{ maxWidth: 'none', margin: 0 }}>
                       <div className="label">Total Sequence Records</div>
                       <div style={{ fontSize: '24px', fontWeight: 600, color: '#1a1a2e', marginTop: '4px' }}>{recordsData.total_count}</div>
@@ -303,7 +303,7 @@ function StudyHome() {
                   <div className="section-header" style={{ marginBottom: '8px' }}>
                     <h3 className="section-title" style={{ fontSize: '15px' }}>Sites</h3>
                   </div>
-                  <div style={{ overflowX: 'auto', border: '1px solid #d0d0d0', borderRadius: '4px' }}>
+                  <div className="table-scroll table-scroll--bordered">
                     {loadingSites ? (
                       <div style={{ padding: '24px', textAlign: 'center', color: '#555', fontSize: '14px' }}>
                         Loading sites...
@@ -357,7 +357,7 @@ function StudyHome() {
                     <div className="section-header" style={{ marginBottom: '8px' }}>
                       <h3 className="section-title" style={{ fontSize: '15px' }}>Arm Allocation Breakdown</h3>
                     </div>
-                    <div style={{ overflowX: 'auto', border: '1px solid #d0d0d0', borderRadius: '4px' }}>
+                    <div className="table-scroll table-scroll--bordered">
                       <table className="data-table" style={{ margin: 0 }}>
                         <thead>
                           <tr>
@@ -385,8 +385,8 @@ function StudyHome() {
                 {/* Main Data Table Container */}
                 <div style={{ border: '1px solid #d0d0d0', borderRadius: '4px', overflow: 'hidden', background: '#ffffff' }}>
                   {/* Table Header Controls */}
-                  <div style={{ padding: '14px 16px', borderBottom: '1px solid #d0d0d0', background: '#f8f9fa', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="table-toolbar" style={{ padding: '14px 16px', borderBottom: '1px solid #d0d0d0', background: '#f8f9fa' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                       <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>Randomized Sequence Records</h2>
                       <span className="badge badge--active">
                         {study.status === 'Generated'
@@ -397,7 +397,7 @@ function StudyHome() {
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <div className="table-toolbar__actions">
                       <button
                         type="button"
                         className="btn-secondary"
@@ -419,7 +419,7 @@ function StudyHome() {
                       )}
 
                       {/* Status Filter Tabs */}
-                      <div style={{ display: 'flex', background: '#e0e0e0', borderRadius: '4px', padding: '2px' }}>
+                      <div className="table-toolbar__filters">
                         {['', 'assigned', 'unassigned', 'blinded', 'unblinded'].map((filter) => (
                           <button
                             key={filter}
@@ -484,7 +484,7 @@ function StudyHome() {
                       Loading sequence records...
                     </div>
                   ) : recordsData && recordsData.records.length > 0 ? (
-                    <div style={{ overflowX: 'auto' }}>
+                    <div className="table-scroll">
                       <table className="data-table" style={{ margin: 0 }}>
                         <thead>
                           <tr>

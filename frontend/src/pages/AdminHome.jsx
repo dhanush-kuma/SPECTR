@@ -176,6 +176,7 @@ function AdminHome() {
             {organizers.length === 0 ? (
               <p className="empty-state">No {ORGANIZER_LABEL_PLURAL} yet. Invite one above.</p>
             ) : (
+              <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -226,6 +227,7 @@ function AdminHome() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}

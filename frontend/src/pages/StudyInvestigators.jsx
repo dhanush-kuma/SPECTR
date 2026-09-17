@@ -337,6 +337,7 @@ function StudyInvestigators() {
                 <p>No {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} added yet.</p>
               </div>
             ) : (
+              <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -434,6 +435,7 @@ function StudyInvestigators() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}

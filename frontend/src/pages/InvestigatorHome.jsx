@@ -496,6 +496,7 @@ function InvestigatorHome() {
                     )}
                   </p>
                 ) : (
+                  <div className="table-scroll">
                   <table className="data-table">
                     <thead>
                       <tr>
@@ -558,6 +559,7 @@ function InvestigatorHome() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             )}

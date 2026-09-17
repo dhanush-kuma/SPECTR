@@ -277,8 +277,8 @@ function UploadCSV() {
                       <p className="field-hint" style={{ marginBottom: '8px' }}>
                         Preview — first {Math.min(PREVIEW_LIMIT, preview.rows.length)} of {preview.rows.length} row(s):
                       </p>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table className="data-table" style={{ minWidth: '400px' }}>
+                      <div className="table-scroll">
+                        <table className="data-table">
                           <thead>
                             <tr>
                               {preview.headers.map((h) => (
@@ -346,7 +346,7 @@ function UploadCSV() {
                   </p>
                 </div>
 
-                <div style={{ overflowX: 'auto', padding: '16px 20px' }}>
+                <div className="table-scroll" style={{ padding: '16px 20px' }}>
                   <table className="data-table">
                     <thead>
                       <tr>

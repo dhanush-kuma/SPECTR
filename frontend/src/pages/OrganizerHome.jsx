@@ -123,6 +123,7 @@ function OrganizerHome() {
                 </p>
               </div>
             ) : (
+              <div className="table-scroll">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -173,6 +174,7 @@ function OrganizerHome() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}
