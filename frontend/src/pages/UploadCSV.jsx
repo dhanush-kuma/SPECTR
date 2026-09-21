@@ -196,23 +196,26 @@ function UploadCSV() {
                   </li>
                   <li>
                     <code>sequence_number</code> — unique positive integer for each randomization slot,
-                    listed in allocation order.
+                    listed in allocation order, across all strata — acting as a single global sequence.
                   </li>
                   <li>
                     <code>kit_code</code> — blinded kit identifier for the treatment arm (e.g.{' '}
                     <code>TRL-4821</code>, <code>TRL-7390</code>). You may use different identifiers
-                    across sites or strata as needed.
+                    across sites or strata as needed. If unblinded trial, may use acronyms for the
+                    intervention.
                   </li>
                   <li>
                     <code>site</code> — enrolling site name or code (hospital, clinic, laboratory, etc.).
-                    The same value must appear on every record belonging to that site.
+                    The same value must appear on every record belonging to that site.{' '}
+                    <strong>If single centre trial, use the site name globally.</strong>
                   </li>
                   <li>
                     <code>strat</code> — stratum label for the participant classification (e.g. age group,
                     disease stage, or other predefined subgroup). Within each site, the same stratum value
                     appears on many records according to your allocation plan — for example, Site 1 may
                     contain 15 records for Stratum A and 20 for Stratum B, and Site 2 would follow the
-                    same stratum structure with its own record counts.
+                    same stratum structure with its own record counts. If no strata are required, use{' '}
+                    &ldquo;N/A&rdquo; globally.
                   </li>
                   <li>
                     <code>treatment_arm</code> — display name of the treatment arm (e.g. <em>Drug A</em>,{' '}
@@ -346,7 +349,7 @@ function UploadCSV() {
                   </p>
                 </div>
 
-                <div className="table-scroll" style={{ padding: '16px 20px' }}>
+                <div className="table-scroll table-scroll--bounded" style={{ padding: '16px 20px' }}>
                   <table className="data-table">
                     <thead>
                       <tr>
