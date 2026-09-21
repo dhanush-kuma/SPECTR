@@ -186,7 +186,9 @@ Copy `backend/.env.example` → `backend/.env`.
 | `SETUP_TOKEN` | Prod | Protects first-run admin setup |
 | `CORS_ORIGINS` | No | Comma-separated frontend URLs |
 | `FRONTEND_URL` | Yes* | Base URL in credential emails |
-| `SMTP_FROM` | Prod** | Sender address |
+| `SMTP_FROM_EMAIL` | Prod** | Sender email address |
+| `SMTP_FROM_NAME` | No | Sender display name (optional) |
+| `SMTP_FROM` | No | Legacy fallback for sender email if `SMTP_FROM_EMAIL` is unset |
 | `ZEPTOMAIL_API_KEY` | Prod** | ZeptoMail Send Mail Token (preferred on Railway) |
 | `ZEPTOMAIL_REGION` | No | ZeptoMail datacenter: `com`, `in`, `eu`, etc. (default `com`) |
 | `RESEND_API_KEY` | Alt** | Resend HTTP API |

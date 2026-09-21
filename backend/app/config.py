@@ -57,11 +57,14 @@ SMTP_HOST = os.environ.get("SMTP_HOST", "")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", "")
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "")
+# Legacy fallback — use SMTP_FROM_EMAIL + SMTP_FROM_NAME instead.
 SMTP_FROM = os.environ.get("SMTP_FROM", "")
 SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() in ("true", "1", "yes")
 
 # ZeptoMail HTTP API — preferred on Railway (avoids outbound SMTP port blocks).
-# Set ZEPTOMAIL_API_KEY + SMTP_FROM; optionally set ZEPTOMAIL_REGION (default: com).
+# Set ZEPTOMAIL_API_KEY + SMTP_FROM_EMAIL; optionally set ZEPTOMAIL_REGION (default: com).
 ZEPTOMAIL_API_KEY = os.environ.get("ZEPTOMAIL_API_KEY", "")
 ZEPTOMAIL_REGION = os.environ.get("ZEPTOMAIL_REGION", "com").lower().strip()
 
@@ -85,8 +88,19 @@ def zeptomail_api_url() -> str:
     return f"https://{host}/v1.1/email"
 
 
+def email_from_address() -> str:
+    return SMTP_FROM_EMAIL or SMTP_FROM
+
+
+def email_from_header() -> str:
+    address = email_from_address()
+    if SMTP_FROM_NAME:
+        return f"{SMTP_FROM_NAME} <{address}>"
+    return address
+
+
 def email_is_configured() -> bool:
-    return bool(SMTP_FROM and (ZEPTOMAIL_API_KEY or RESEND_API_KEY or SMTP_HOST))
+    return bool(email_from_address() and (ZEPTOMAIL_API_KEY or RESEND_API_KEY or SMTP_HOST))
 
 if IS_PRODUCTION:
     if not SECRET_KEY or SECRET_KEY == DEFAULT_SECRET_KEY:

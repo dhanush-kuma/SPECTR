@@ -9,13 +9,15 @@ from ..config import (
     FRONTEND_URL,
     IS_PRODUCTION,
     RESEND_API_KEY,
-    SMTP_FROM,
+    SMTP_FROM_NAME,
     SMTP_HOST,
     SMTP_PASSWORD,
     SMTP_PORT,
     SMTP_USE_TLS,
     SMTP_USER,
     ZEPTOMAIL_API_KEY,
+    email_from_address,
+    email_from_header,
     email_is_configured,
     zeptomail_api_url,
 )
@@ -33,8 +35,12 @@ def _zeptomail_auth_header() -> str:
 
 def _send_via_zeptomail(to: str, subject: str, body: str) -> None:
     """Send email using ZeptoMail's HTTP API (avoids outbound SMTP port blocks)."""
+    from_payload: dict[str, str] = {"address": email_from_address()}
+    if SMTP_FROM_NAME:
+        from_payload["name"] = SMTP_FROM_NAME
+
     payload = json.dumps({
-        "from": {"address": SMTP_FROM, "name": "SPECTR"},
+        "from": from_payload,
         "to": [{"email_address": {"address": to}}],
         "subject": subject,
         "textbody": body,
@@ -63,7 +69,7 @@ def _send_via_zeptomail(to: str, subject: str, body: str) -> None:
 def _send_via_resend(to: str, subject: str, body: str) -> None:
     """Send email using Resend's HTTP API (avoids outbound SMTP port blocks)."""
     payload = json.dumps({
-        "from": SMTP_FROM,
+        "from": email_from_header(),
         "to": [to],
         "subject": subject,
         "text": body,
@@ -92,7 +98,7 @@ def _send_via_resend(to: str, subject: str, body: str) -> None:
 def _send_via_smtp(to: str, subject: str, body: str) -> None:
     """Send email via SMTP (port 465 = SSL, port 587 = STARTTLS)."""
     message = EmailMessage()
-    message["From"] = SMTP_FROM
+    message["From"] = email_from_header()
     message["To"] = to
     message["Subject"] = subject
     message.set_content(body)
