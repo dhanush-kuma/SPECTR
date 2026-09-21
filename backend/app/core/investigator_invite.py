@@ -18,7 +18,7 @@ from .investigators import (
 from .csv_limits import ensure_csv_size
 from .validators import normalize_email
 
-MAX_BULK_ROWS = 100
+MAX_BULK_ROWS = 10
 
 
 class DuplicateInvestigatorError(Exception):
@@ -67,7 +67,7 @@ def parse_investigator_csv(content: bytes) -> list[tuple[int, str | None, str]]:
         raise ValueError("CSV file contains no data rows.")
 
     if len(rows) > MAX_BULK_ROWS:
-        raise ValueError(f"CSV may contain at most {MAX_BULK_ROWS} investigators per upload.")
+        raise ValueError(f"CSV size limit is {MAX_BULK_ROWS} rows.")
 
     return rows
 

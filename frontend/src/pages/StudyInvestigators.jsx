@@ -4,6 +4,8 @@ import { apiFetch, apiUpload, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 import { INVESTIGATOR_LABEL, INVESTIGATOR_LABEL_PLURAL } from '../labels'
 
+const MAX_CSV_ROWS = 10
+
 const STATUS_LABELS = {
   inactive: { label: 'Inactive', cls: 'badge--inactive' },
   active:   { label: 'Active',   cls: 'badge--active'   },
@@ -78,6 +80,18 @@ function StudyInvestigators() {
 
     if (!file.name.toLowerCase().endsWith('.csv')) {
       setCsvError('Please select a .csv file.')
+      e.target.value = ''
+      return
+    }
+
+    const text = await file.text()
+    const rowCount = text
+      .trim()
+      .split(/\r?\n/)
+      .filter((line) => line.trim()).length
+
+    if (rowCount > MAX_CSV_ROWS) {
+      setCsvError(`CSV size limit is ${MAX_CSV_ROWS} rows.`)
       e.target.value = ''
       return
     }
@@ -275,7 +289,7 @@ function StudyInvestigators() {
                     <li>CSV must have exactly <strong>2 columns</strong>: email, then name.</li>
                     <li>Do <strong>not</strong> include a header row — data only.</li>
                     <li>Name is optional and may be left empty; email is required on every row.</li>
-                    <li>Maximum 100 {INVESTIGATOR_LABEL_PLURAL.toLowerCase()} per file.</li>
+                    <li>CSV size limit: <strong>{MAX_CSV_ROWS} rows</strong>.</li>
                     <li>Maximum file size: <strong>1 MB</strong>.</li>
                   </ul>
 
