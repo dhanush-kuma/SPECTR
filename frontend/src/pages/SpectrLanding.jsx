@@ -1,3 +1,52 @@
+const GITHUB_URL = 'https://github.com/dhanush-kuma/SPECTR'
+const DOCS_URL = 'https://github.com/dhanush-kuma/SPECTR/blob/main/docs/ENGINEERING.md'
+const SITE_URL = 'https://mmmr.in/services/spectr'
+const ONBOARDING_EMAIL = 'mmmedicalresearch@outlook.com'
+
+const SUPPORTS = [
+  {
+    title: 'Instant Bedside Allocations',
+    text: 'Real-time assignment generation at the clinic or point of care.',
+  },
+  {
+    title: 'Emergency Unblinding',
+    text: 'Optional audited code-break workflow for masked investigational interventions.',
+  },
+  {
+    title: 'Parallel-Group RCT Designs',
+    text: 'Supports 2-arm, multi-arm, and factorial trials randomized at the individual level.',
+  },
+  {
+    title: 'No Dynamic Minimization',
+    text: 'Does not execute on-the-fly adaptive covariate-adjusted allocation algorithms.',
+  },
+  {
+    title: 'Custom Sequences & Stratification',
+    text:
+      'Ingests complex permuted blocks stratified by site and one additional factor (e.g., age, sex, severity).',
+  },
+  {
+    title: 'Zero Direct Patient Identifiers',
+    text: 'Never collects or stores patient names, contact numbers, or government IDs.',
+  },
+  {
+    title: 'Multicenter Queue Isolation',
+    text: 'Strictly confines investigators to their assigned institutional lists.',
+  },
+  {
+    title: 'Blinding Options',
+    text: 'Supports participant, investigator, and statistician blinding.',
+  },
+  {
+    title: 'Concurrency & Double-Draw Protection',
+    text: 'Employs database row locks to handle simultaneous global traffic.',
+  },
+  {
+    title: 'Duplicate Screening Guards',
+    text: 'Prevents participant IDs from being randomized multiple times.',
+  },
+]
+
 function SpectrLanding() {
   return (
     <article className="landing">
@@ -6,64 +55,105 @@ function SpectrLanding() {
           SPECTR: Secure Point-of-care Enrollment and Centralized Trial Randomization
         </h1>
         <p className="landing__lead">
-          A lightweight, GCP-compliant central allocation engine for multicenter clinical
-          trials.
+          A free, open-source, GCP-compliant central allocation engine engineered for academic,
+          investigator-initiated, and not-for-profit multicenter randomized controlled trials.
         </p>
+        <div className="landing__cta">
+          <a className="btn-primary" href={`mailto:${ONBOARDING_EMAIL}`}>
+            Get Started / Request Onboarding
+          </a>
+          <a
+            className="btn-secondary"
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View on GitHub
+          </a>
+          <a
+            className="btn-secondary"
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Read Technical Documentation
+          </a>
+        </div>
       </header>
 
       <section className="landing__section">
         <h2>Overview</h2>
         <p>
-          SPECTR provides central randomization and allocation concealment for
-          investigator-initiated and multicentric randomized controlled trials. Designed by
-          trial methodologists, it eliminates the need for cumbersome physical envelopes and
-          cost-prohibitive enterprise IWRS/RTSM software, delivering instant, tamper-proof
-          treatment allocations directly to point-of-care investigators.
+          SPECTR provides central randomization and allocation concealment for clinical trialists.
+          Designed and validated by trial methodologists, it eliminates the vulnerability of physical
+          sealed envelopes (SNOSE) and avoids the prohibitive licensing costs of enterprise
+          RTSM/IWRS platforms.
+        </p>
+        <p>
+          By uploading your own pre-computed randomisation sequences, SPECTR delivers instantaneous,
+          tamper-evident treatment allocations directly to point-of-care investigators at the clinic
+          or bedside.
         </p>
       </section>
 
       <section className="landing__section">
-        <h2>Key Capabilities</h2>
+        <h2>Core Capabilities</h2>
 
         <div className="landing__capability">
           <h3>Methodological Flexibility</h3>
           <p>
-            Generate complex, customized randomization schedules offline using your preferred
-            biostatistical workflows (e.g., R, Stata, SAS) with permuted blocks of varying sizes
-            and multi-level stratification (by study center, age, clinical severity). Simply
-            import your pre-computed sequences into SPECTR.
+            Seamlessly import pre-computed, stratified permuted-block sequences generated offline via
+            R, Stata, SAS, or Python.
           </p>
         </div>
 
         <div className="landing__capability">
-          <h3>Frictionless Point-of-Care Allocation</h3>
+          <h3>Bedside Point-of-Care Allocation</h3>
           <p>
-            Site investigators access a fast, clean interface optimized for clinic and bedside
-            use. Automatically generates participant IDs and delivers an immediate, unalterable
-            treatment assignment.
+            A fast, streamlined, mobile-responsive interface built for clinical workflows.
+            Investigators confirm participant eligibility and receive an immediate, immutable
+            allocation assignment.
           </p>
         </div>
 
         <div className="landing__capability">
-          <h3>Audit Trails &amp; Automated Verification</h3>
+          <h3>Regulatory-Grade Audit Trails</h3>
           <p>
-            Every allocation event triggers an immutable digital receipt with participant IDs,
-            stratum tags, and precise UTC timestamps. Both the site investigator and the central
-            coordinating team can review and export allocation history in real-time.
+            Every allocation event generates an immutable digital record capturing study ID, screening
+            ID, stratum tags, operator identity, IP address, and server-side UTC timestamps.
+            Real-time automated dual notifications keep site coordinators and the central coordinating
+            office synchronized.
           </p>
+        </div>
+
+        <div className="landing__capability">
+          <h3>ICH-GCP &amp; Data Integrity Controls</h3>
+          <p>Built around ICH-GCP E6(R2/R3) Section 5.5.3 and 21 CFR Part 11 principles:</p>
+          <ul className="landing__list">
+            <li>
+              <strong>Absolute Allocation Concealment:</strong> Zero sequence predictability with no
+              advance assignment pre-fetching.
+            </li>
+            <li>
+              <strong>Database Row-Level Concurrency Locks:</strong> Eliminates race conditions and
+              prevents double-allocation collisions during simultaneous multi-site draws.
+            </li>
+            <li>
+              <strong>Role-Based Multi-Site Isolation:</strong> Site personnel are strictly isolated
+              to their institution&apos;s designated allocation queues.
+            </li>
+          </ul>
         </div>
       </section>
 
       <section className="landing__section">
-        <h2>Regulatory &amp; GCP Integrity</h2>
-        <p>Built around ICH-GCP E6(R2/R3) and 21 CFR Part 11 principles:</p>
-        <ul className="landing__list">
-          <li>Strict allocation concealment with zero sequence predictability</li>
-          <li>
-            Database-level concurrency locks to prevent race conditions during simultaneous
-            enrollments
-          </li>
-          <li>Strict role-based access control (RBAC) across participating centers</li>
+        <h2>SPECTR Supports</h2>
+        <ul className="landing__supports">
+          {SUPPORTS.map((item) => (
+            <li key={item.title}>
+              <strong>{item.title}:</strong> {item.text}
+            </li>
+          ))}
         </ul>
       </section>
 
@@ -71,20 +161,22 @@ function SpectrLanding() {
         <h2>How It Works</h2>
         <ol className="landing__steps">
           <li>
-            <strong>Setup &amp; Ingestion:</strong> The Trial Biostatistician or Central
-            Coordinator uploads the stratified block sequence and sets site permissions.
+            <strong>Protocol Setup &amp; Sequence Ingestion:</strong> The trial biostatistician or
+            lead coordinator defines study strata, configures site accounts, and imports the verified
+            allocation sequence.
           </li>
           <li>
-            <strong>Screen &amp; Validate:</strong> The site investigator confirms participant
-            eligibility and validates before randomisation.
+            <strong>Screening &amp; Validation:</strong> The point-of-care site investigator enters
+            the participant screening ID and confirms all protocol eligibility criteria.
           </li>
           <li>
-            <strong>Instant Assignment:</strong> SPECTR locks the next sequential allocation in
-            real time and reveals the assigned arm.
+            <strong>Instant Allocation:</strong> SPECTR applies a database row lock, advances the
+            active stratum queue by one position, and instantly reveals the treatment assignment.
           </li>
           <li>
-            <strong>Central Confirmation:</strong> Dual verification confirmation immediately
-            visible to both the investigator and trial oversight.
+            <strong>Audit Logging &amp; Central Confirmation:</strong> The system generates an
+            immutable UTC-stamped audit entry — verifiable by the site investigator and the trial
+            coordinating center.
           </li>
         </ol>
       </section>
@@ -92,40 +184,45 @@ function SpectrLanding() {
       <section className="landing__section landing__citation">
         <h2>Citation</h2>
         <p>
-          When reporting methodology in trial protocols, ethics submissions, or peer-reviewed
-          publications, please cite:
+          When reporting randomization and allocation methodology in study protocols, ethics board
+          submissions, preprints, or peer-reviewed manuscripts, please cite:
         </p>
         <p className="landing__cite-block">
           Pradeep M, Kumar D. SPECTR: Secure Point-of-care Enrollment and Centralized Trial
           Randomization [Computer software]. Available from:{' '}
-          <a href="https://mmmr.in/services/spectr" target="_blank" rel="noopener noreferrer">
-            https://mmmr.in/services/spectr
+          <a href={SITE_URL} target="_blank" rel="noopener noreferrer">
+            {SITE_URL}
           </a>
         </p>
       </section>
 
       <footer className="landing__footer">
+        <h2>Governance, Open Source &amp; Support</h2>
         <p>
-          <strong>Developed &amp; Maintained by:</strong> Dr. Manu Pradeep &amp; Dhanush Kumar
+          A free, open-source initiative developed by Dr. Manu Pradeep (Clinical Epidemiologist)
+          &amp; Dhanush Kumar (Lead Developer), MM Medical Research (OPC) Pvt. Ltd., Cherthala,
+          Kerala, India.
         </p>
         <p>
-          A free open-source tool by MM Medical Research (OPC) Pvt. Ltd., Cherthala, Kerala,
-          India.
+          <strong>Source Code:</strong> Available under the AGPLv3 License on{' '}
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>.
         </p>
         <p>
-          View Github source code here:{' '}
-          <a
-            href="https://github.com/dhanush-kuma/SPECTR"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            https://github.com/dhanush-kuma/SPECTR
-          </a>
+          <strong>Trial Onboarding &amp; Inquiries:</strong> Email{' '}
+          <a href={`mailto:${ONBOARDING_EMAIL}`}>{ONBOARDING_EMAIL}</a> with:
         </p>
-        <p>
-          Inquiries &amp; Setup Support:{' '}
-          <a href="mailto:mmmedicalresearch@outlook.in">mmmedicalresearch@outlook.in</a>
-        </p>
+        <ul className="landing__list">
+          <li>
+            <strong>Investigator Info:</strong> Name, designation, institution, phone number
+          </li>
+          <li>
+            <strong>Trial Abstract:</strong> Study design, sample size, and objectives (max 500 words)
+          </li>
+          <li>
+            <strong>Sponsorship &amp; Funding:</strong> Academic/investigator-initiated,
+            not-for-profit, or commercial (include grant status)
+          </li>
+        </ul>
       </footer>
     </article>
   )
