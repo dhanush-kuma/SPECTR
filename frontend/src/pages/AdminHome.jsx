@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL, ORGANIZER_LABEL_PLURAL } from '../labels'
@@ -189,6 +189,9 @@ function AdminHome() {
                     <th>#</th>
                     <th>Email</th>
                     <th>Status</th>
+                    <th>Studies</th>
+                    <th>Investigators</th>
+                    <th>Kits</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -209,36 +212,52 @@ function AdminHome() {
                           {status.label}
                         </span>
                       </td>
+                      <td>{org.study_count ?? 0}</td>
+                      <td>{org.investigator_count ?? 0}</td>
+                      <td>{org.total_randomization_records ?? 0}</td>
                       <td>
-                        {canToggle ? (
-                          <button
-                            className={org.status === 'active' ? 'btn-danger' : 'btn-restore'}
-                            disabled={togglingId === org.id}
-                            onClick={async () => {
-                              setTogglingId(org.id)
-                              try {
-                                const res = await apiFetch(
-                                  `/admin/organizers/${org.id}/status`,
-                                  { method: 'PATCH' }
-                                )
-                                if (res.ok) {
-                                  const updated = await res.json()
-                                  setOrganizers((prev) =>
-                                    prev.map((o) => (o.id === updated.id ? updated : o))
-                                  )
-                                }
-                              } finally {
-                                setTogglingId(null)
-                              }
-                            }}
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <Link
+                            to={`/admin/organizers/${org.id}`}
+                            className="btn-primary"
+                            style={{ textDecoration: 'none', fontSize: '12px', padding: '4px 10px' }}
                           >
-                            {togglingId === org.id
-                              ? '…'
-                              : org.status === 'active' ? 'Disable' : 'Enable'}
-                          </button>
-                        ) : (
-                          <span className="table-muted">Pending ToS</span>
-                        )}
+                            View
+                          </Link>
+                          {canToggle ? (
+                            <button
+                              className={org.status === 'active' ? 'btn-danger' : 'btn-restore'}
+                              disabled={togglingId === org.id}
+                              onClick={async () => {
+                                setTogglingId(org.id)
+                                try {
+                                  const res = await apiFetch(
+                                    `/admin/organizers/${org.id}/status`,
+                                    { method: 'PATCH' }
+                                  )
+                                  if (res.ok) {
+                                    const updated = await res.json()
+                                    setOrganizers((prev) =>
+                                      prev.map((o) =>
+                                        o.id === updated.id
+                                          ? { ...o, ...updated }
+                                          : o
+                                      )
+                                    )
+                                  }
+                                } finally {
+                                  setTogglingId(null)
+                                }
+                              }}
+                            >
+                              {togglingId === org.id
+                                ? '…'
+                                : org.status === 'active' ? 'Disable' : 'Enable'}
+                            </button>
+                          ) : (
+                            <span className="table-muted">Pending ToS</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     )

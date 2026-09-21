@@ -20,6 +20,10 @@ function Header({ children }) {
 
   const closeMenu = () => setMenuOpen(false)
 
+  const showAdminNav =
+    location.pathname === '/admin/home' ||
+    /^\/admin\/organizers\/\d+$/.test(location.pathname)
+
   return (
     <header className="app-header">
       <div className="app-header__top">
@@ -71,13 +75,15 @@ function Header({ children }) {
           >
             Study Investigator (SI)
           </NavLink>
-          <NavLink
-            to="/admin"
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            onClick={closeMenu}
-          >
-            Admin
-          </NavLink>
+          {showAdminNav && (
+            <NavLink
+              to="/admin/home"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={closeMenu}
+            >
+              Admin
+            </NavLink>
+          )}
         </nav>
         {children ? <div className="header-actions">{children}</div> : null}
       </div>

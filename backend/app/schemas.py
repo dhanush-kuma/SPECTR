@@ -145,6 +145,37 @@ class OrganizerOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class OrganizerSummaryOut(BaseModel):
+    id: int
+    username: str
+    is_active: bool
+    status: str
+    created_at: datetime
+    study_count: int
+    active_study_count: int
+    site_count: int
+    investigator_count: int
+    total_randomization_records: int
+    assigned_participants: int
+
+
+class OrganizerDetailOut(OrganizerSummaryOut):
+    terms_accepted_at: Optional[datetime] = None
+
+
+class AdminStudySummaryOut(BaseModel):
+    id: int
+    title: str
+    protocol_code: str
+    status: str
+    created_at: datetime
+    site_count: int
+    investigator_count: int
+    total_records: int
+    assigned: int
+    unassigned: int
+
+
 class AcceptTermsRequest(BaseModel):
     username: str
     password: str

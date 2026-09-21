@@ -6,6 +6,7 @@ import TermsOfService from './pages/TermsOfService'
 import AdminGuard from './pages/AdminGuard'
 import AdminLogin from './pages/AdminLogin'
 import AdminHome from './pages/AdminHome'
+import AdminOrganizerDetail from './pages/AdminOrganizerDetail'
 import AdminProtectedRoute from './pages/AdminProtectedRoute'
 import OrganizerGuard from './pages/OrganizerGuard'
 import OrganizerLogin from './pages/OrganizerLogin'
@@ -37,6 +38,14 @@ function App() {
         element={
           <AdminProtectedRoute>
             <AdminHome />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/organizers/:organizerId"
+        element={
+          <AdminProtectedRoute>
+            <AdminOrganizerDetail />
           </AdminProtectedRoute>
         }
       />
