@@ -360,9 +360,18 @@ function InvestigatorHome() {
                 {error && <p className="error">{error}</p>}
 
                 {assignedRecord && (
-                  <div className="success-msg">
-                    Kit code <code>{assignedRecord.kit_code}</code> assigned to {PARTICIPANT_LABEL.toLowerCase()}{' '}
-                    <strong>{assignedRecord.assigned_patient_id}</strong>.
+                  <div className="success-msg kit-assigned-msg">
+                    <div className="kit-assigned-msg__code">{assignedRecord.kit_code}</div>
+                    <div className="kit-assigned-msg__detail">
+                      Kit code <code>{assignedRecord.kit_code}</code> assigned to {PARTICIPANT_LABEL.toLowerCase()}{' '}
+                      <strong>{assignedRecord.assigned_patient_id}</strong>.
+                    </div>
+                  </div>
+                )}
+
+                {assignedRecord && isParticipantBlinding && (
+                  <div className="pb-blinding-warning">
+                    This study is <strong>Participant Blinded (PB)</strong>. Do not disclose the assigned treatment arm to the <strong>{PARTICIPANT_LABEL}</strong>.
                   </div>
                 )}
 
