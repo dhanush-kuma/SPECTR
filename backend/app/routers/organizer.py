@@ -2,7 +2,7 @@ import math
 from typing import Optional
 import bcrypt
 from fastapi import APIRouter, Cookie, Depends, File, HTTPException, Query, Request, Response, UploadFile
-from sqlalchemy import String, cast, or_
+from sqlalchemy import String, and_, cast, exists, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -1076,7 +1076,8 @@ def get_randomization_records(
 ):
     """
     Get paginated randomization records for a study.
-    Supports filtering by search query (kit_code, treatment_name, assigned_patient_id, sequence_number),
+    Supports filtering by search query (kit_code, treatment_name, assigned_patient_id,
+    sequence_number, site name, strata name, investigator name/username/id),
     status_filter ('assigned' | 'unassigned' | 'blinded' | 'unblinded'),
     site_id, and strata_name.
     """
@@ -1123,6 +1124,28 @@ def get_randomization_records(
                 RandomizationRecord.treatment_name.ilike(s),
                 RandomizationRecord.assigned_patient_id.ilike(s),
                 cast(RandomizationRecord.sequence_number, String).ilike(s),
+                exists().where(
+                    and_(
+                        Site.id == RandomizationRecord.site_id,
+                        Site.name.ilike(s),
+                    )
+                ),
+                exists().where(
+                    and_(
+                        Strata.id == RandomizationRecord.strata_id,
+                        Strata.name.ilike(s),
+                    )
+                ),
+                exists().where(
+                    and_(
+                        Investigator.id == RandomizationRecord.assigned_by_investigator_id,
+                        or_(
+                            Investigator.name.ilike(s),
+                            Investigator.username.ilike(s),
+                            cast(Investigator.id, String).ilike(s),
+                        ),
+                    )
+                ),
             )
         )
 

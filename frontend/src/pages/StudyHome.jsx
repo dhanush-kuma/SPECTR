@@ -616,7 +616,7 @@ function StudyHome() {
                           <input
                             id="records-search"
                             type="text"
-                            placeholder={`Kit, drug, ${PARTICIPANT_LABEL.toLowerCase()}...`}
+                            placeholder={`kit, site, strata, arm, ${PARTICIPANT_LABEL.toLowerCase()} ID, investigator ID, name...`}
                             value={search}
                             onChange={handleSearchChange}
                             className="field input"
