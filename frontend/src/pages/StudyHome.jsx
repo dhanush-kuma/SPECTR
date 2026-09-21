@@ -29,10 +29,13 @@ function StudyHome() {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(20)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('') // '' | 'assigned' | 'unassigned'
+  const [statusFilter, setStatusFilter] = useState('') // '' | 'assigned' | 'unassigned' | 'blinded' | 'unblinded'
+  const [siteFilter, setSiteFilter] = useState('')
+  const [strataFilter, setStrataFilter] = useState('')
   const [recordsData, setRecordsData] = useState(null)
   const [loadingRecords, setLoadingRecords] = useState(false)
   const [sitesData, setSitesData] = useState([])
+  const [stratasData, setStratasData] = useState([])
   const [loadingSites, setLoadingSites] = useState(false)
   const [exportingRecords, setExportingRecords] = useState(false)
 
@@ -65,6 +68,8 @@ function StudyHome() {
     })
     if (search.trim()) params.append('search', search.trim())
     if (statusFilter) params.append('status_filter', statusFilter)
+    if (siteFilter) params.append('site_id', siteFilter)
+    if (strataFilter) params.append('strata_name', strataFilter)
 
     apiFetch(`/organizer/studies/${studyId}/randomization-records?${params.toString()}`)
       .then((res) => (res.ok ? res.json() : null))
@@ -73,7 +78,7 @@ function StudyHome() {
       })
       .catch(() => {})
       .finally(() => setLoadingRecords(false))
-  }, [studyId, hasRandomizationView, page, perPage, search, statusFilter])
+  }, [studyId, hasRandomizationView, page, perPage, search, statusFilter, siteFilter, strataFilter])
 
   useEffect(() => {
     if (!hasRandomizationView) return
@@ -86,14 +91,45 @@ function StudyHome() {
       .finally(() => setLoadingSites(false))
   }, [studyId, hasRandomizationView])
 
+  useEffect(() => {
+    if (!hasRandomizationView) return
+
+    const params = new URLSearchParams()
+    if (siteFilter) params.append('site_id', siteFilter)
+
+    apiFetch(`/organizer/studies/${studyId}/stratas?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) setStratasData(data)
+        else setStratasData([])
+      })
+      .catch(() => setStratasData([]))
+  }, [studyId, hasRandomizationView, siteFilter])
+
+  useEffect(() => {
+    if (strataFilter && !stratasData.some((strata) => strata.name === strataFilter)) {
+      setStrataFilter('')
+    }
+  }, [siteFilter, stratasData, strataFilter])
+
   // Reset page to 1 when search or statusFilter changes
   function handleSearchChange(e) {
     setSearch(e.target.value)
     setPage(1)
   }
 
-  function handleFilterChange(filter) {
-    setStatusFilter(filter)
+  function handleFilterChange(e) {
+    setStatusFilter(e.target.value)
+    setPage(1)
+  }
+
+  function handleSiteFilterChange(e) {
+    setSiteFilter(e.target.value)
+    setPage(1)
+  }
+
+  function handleStrataFilterChange(e) {
+    setStrataFilter(e.target.value)
     setPage(1)
   }
 
@@ -386,7 +422,7 @@ function StudyHome() {
                 <div style={{ border: '1px solid #d0d0d0', borderRadius: '4px', overflow: 'hidden', background: '#ffffff' }}>
                   {/* Table Header Controls */}
                   <div className="table-toolbar" style={{ padding: '14px 16px', borderBottom: '1px solid #d0d0d0', background: '#f8f9fa' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <div className="table-toolbar__header">
                       <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>Randomized Sequence Records</h2>
                       <span className="badge badge--active">
                         {study.status === 'Generated'
@@ -398,83 +434,115 @@ function StudyHome() {
                     </div>
 
                     <div className="table-toolbar__actions">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        style={TABLE_ACTION_BTN_STYLE}
-                        onClick={handleExportRecords}
-                        disabled={exportingRecords || !recordsData?.total_count}
-                      >
-                        {exportingRecords ? 'Exporting…' : 'Export CSV'}
-                      </button>
-
-                      {study.status === 'Generated' && (
-                        <Link
-                          to={`/organizer/studies/${studyId}/upload-csv`}
+                      <div className="table-toolbar__buttons">
+                        <button
+                          type="button"
                           className="btn-secondary"
-                          style={{ ...TABLE_ACTION_BTN_STYLE, textDecoration: 'none' }}
+                          style={TABLE_ACTION_BTN_STYLE}
+                          onClick={handleExportRecords}
+                          disabled={exportingRecords || !recordsData?.total_count}
                         >
-                          Re-upload CSV
-                        </Link>
-                      )}
+                          {exportingRecords ? 'Exporting…' : 'Export CSV'}
+                        </button>
 
-                      {/* Status Filter Tabs */}
-                      <div className="table-toolbar__filters">
-                        {['', 'assigned', 'unassigned', 'blinded', 'unblinded'].map((filter) => (
-                          <button
-                            key={filter}
-                            type="button"
-                            onClick={() => handleFilterChange(filter)}
-                            style={{
-                              border: 'none',
-                              background: statusFilter === filter ? '#ffffff' : 'transparent',
-                              color: statusFilter === filter ? '#1a1a2e' : '#555',
-                              fontWeight: statusFilter === filter ? 600 : 500,
-                              padding: '4px 12px',
-                              borderRadius: '2px',
-                              fontSize: '13px',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                              textTransform: 'capitalize',
-                            }}
+                        {study.status === 'Generated' && (
+                          <Link
+                            to={`/organizer/studies/${studyId}/upload-csv`}
+                            className="btn-secondary"
+                            style={{ ...TABLE_ACTION_BTN_STYLE, textDecoration: 'none' }}
                           >
-                            {filter || 'All'}
-                          </button>
-                        ))}
+                            Re-upload CSV
+                          </Link>
+                        )}
                       </div>
 
-                      {/* Search Bar */}
-                      <input
-                        type="text"
-                        placeholder={`Search kit, drug, ${PARTICIPANT_LABEL.toLowerCase()}...`}
-                        value={search}
-                        onChange={handleSearchChange}
-                        className="field input"
-                        style={{
-                          padding: '6px 10px',
-                          fontSize: '13px',
-                          border: '1px solid #b0b0b0',
-                          borderRadius: '3px',
-                          width: '210px',
-                          outline: 'none',
-                        }}
-                      />
+                      <div className="table-toolbar__filters-row table-toolbar__filters-row--primary">
+                        <select
+                          value={siteFilter}
+                          onChange={handleSiteFilterChange}
+                          className="select-input"
+                          aria-label="Filter by site"
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '13px',
+                          }}
+                        >
+                          <option value="">All Sites</option>
+                          {sitesData.map((site) => (
+                            <option key={site.id} value={site.id}>
+                              {site.name}
+                            </option>
+                          ))}
+                        </select>
 
-                      {/* Per Page Select */}
-                      <select
-                        value={perPage}
-                        onChange={handlePerPageChange}
-                        className="select-input"
-                        style={{
-                          padding: '5px 10px',
-                          fontSize: '13px',
-                        }}
-                      >
-                        <option value={10}>10 per page</option>
-                        <option value={20}>20 per page</option>
-                        <option value={50}>50 per page</option>
-                        <option value={100}>100 per page</option>
-                      </select>
+                        <select
+                          value={strataFilter}
+                          onChange={handleStrataFilterChange}
+                          className="select-input"
+                          aria-label="Filter by strata"
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '13px',
+                          }}
+                        >
+                          <option value="">All Strata</option>
+                          {stratasData.map((strata) => (
+                            <option key={strata.name} value={strata.name}>
+                              {strata.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={statusFilter}
+                          onChange={handleFilterChange}
+                          className="select-input"
+                          aria-label="Filter records"
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '13px',
+                          }}
+                        >
+                          <option value="">All</option>
+                          <option value="assigned">Assigned</option>
+                          <option value="unassigned">Unassigned</option>
+                          <option value="blinded">Blinded</option>
+                          <option value="unblinded">Unblinded</option>
+                        </select>
+                      </div>
+
+                      <div className="table-toolbar__filters-row table-toolbar__filters-row--secondary">
+                        <input
+                          type="text"
+                          placeholder={`Search kit, drug, ${PARTICIPANT_LABEL.toLowerCase()}...`}
+                          value={search}
+                          onChange={handleSearchChange}
+                          className="field input"
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '13px',
+                            border: '1px solid #b0b0b0',
+                            borderRadius: '3px',
+                            outline: 'none',
+                          }}
+                        />
+
+                        <select
+                          value={perPage}
+                          onChange={handlePerPageChange}
+                          className="select-input"
+                          aria-label="Records per page"
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '13px',
+                          }}
+                        >
+                          <option value={10}>10 per page</option>
+                          <option value={20}>20 per page</option>
+                          <option value={50}>50 per page</option>
+                          <option value={100}>100 per page</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
@@ -490,10 +558,13 @@ function StudyHome() {
                           <tr>
                             <th style={{ width: '80px' }}>Seq #</th>
                             <th>Kit Code</th>
+                            <th>Site</th>
+                            <th>Strata</th>
                             <th>Treatment Arm</th>
                             <th>Blind Status</th>
                             <th>{PARTICIPANT_LABEL} ID</th>
                             <th>{INVESTIGATOR_LABEL} ID</th>
+                            <th>{INVESTIGATOR_LABEL} Name</th>
                             <th>Assigned Date</th>
                           </tr>
                         </thead>
@@ -502,6 +573,8 @@ function StudyHome() {
                             <tr key={rec.id}>
                               <td style={{ fontWeight: 600 }}>#{rec.sequence_number}</td>
                               <td style={{ fontFamily: 'monospace' }}>{rec.kit_code}</td>
+                              <td>{rec.site_name || '—'}</td>
+                              <td>{rec.strata_name || '—'}</td>
                               <td>{rec.treatment_name}</td>
                               <td>
                                 {rec.blind ? (
@@ -524,6 +597,15 @@ function StudyHome() {
                                   rec.assigned_by_investigator_username
                                 ) : rec.assigned_by_investigator_id ? (
                                   `ID #${rec.assigned_by_investigator_id}`
+                                ) : (
+                                  <span style={{ color: '#888' }}>—</span>
+                                )}
+                              </td>
+                              <td>
+                                {rec.assigned_by_investigator_id ? (
+                                  rec.assigned_by_investigator_name?.trim()
+                                    || rec.assigned_by_investigator_email
+                                    || <span style={{ color: '#888' }}>—</span>
                                 ) : (
                                   <span style={{ color: '#888' }}>—</span>
                                 )}

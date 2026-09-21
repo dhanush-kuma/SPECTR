@@ -386,6 +386,10 @@ class SiteSummaryOut(BaseModel):
     unassigned: int
 
 
+class StrataFilterOptionOut(BaseModel):
+    name: str
+
+
 class PaginatedRandomizationRecords(BaseModel):
     total_count: int
     page: int

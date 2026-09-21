@@ -59,6 +59,7 @@ from ..schemas import (
     PaginatedRandomizationRecords,
     RandomizationRecordOut,
     SiteSummaryOut,
+    StrataFilterOptionOut,
     StudyCreate,
     StudyOut,
     StudyUpdate,
@@ -995,6 +996,34 @@ def get_study_sites(
 
 
 @router.get(
+    "/studies/{study_id}/stratas",
+    response_model=list[StrataFilterOptionOut],
+)
+def get_study_stratas(
+    study_id: int,
+    site_id: Optional[int] = Query(default=None),
+    db: Session = Depends(get_db),
+    current_organizer: Organizer = Depends(get_current_organizer),
+):
+    """List unique stratum names for a study, optionally scoped to one site."""
+    study = _get_study_for_organizer(study_id, current_organizer.id, db)
+
+    query = db.query(Strata.name).filter(Strata.study_id == study.id)
+    if site_id is not None:
+        site = (
+            db.query(Site)
+            .filter(Site.id == site_id, Site.study_id == study.id)
+            .first()
+        )
+        if not site:
+            raise HTTPException(status_code=400, detail="Invalid site filter.")
+        query = query.filter(Strata.site_id == site_id)
+
+    names = query.distinct().order_by(Strata.name.asc()).all()
+    return [StrataFilterOptionOut(name=row[0]) for row in names]
+
+
+@router.get(
     "/studies/{study_id}/randomization-records",
     response_model=PaginatedRandomizationRecords,
 )
@@ -1006,13 +1035,16 @@ def get_randomization_records(
     per_page: int = Query(default=20, ge=1, le=100),
     search: Optional[str] = Query(default=None),
     status_filter: Optional[str] = Query(default=None),
+    site_id: Optional[int] = Query(default=None),
+    strata_name: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
     """
     Get paginated randomization records for a study.
-    Supports filtering by search query (kit_code, treatment_name, assigned_patient_id, sequence_number)
-    and status_filter ('assigned' | 'unassigned').
+    Supports filtering by search query (kit_code, treatment_name, assigned_patient_id, sequence_number),
+    status_filter ('assigned' | 'unassigned' | 'blinded' | 'unblinded'),
+    site_id, and strata_name.
     """
     study = _get_study_for_organizer(study_id, current_organizer.id, db)
 
@@ -1021,6 +1053,34 @@ def get_randomization_records(
     )
 
     query = base_query
+    if site_id is not None:
+        site = (
+            db.query(Site)
+            .filter(Site.id == site_id, Site.study_id == study.id)
+            .first()
+        )
+        if not site:
+            raise HTTPException(status_code=400, detail="Invalid site filter.")
+        query = query.filter(RandomizationRecord.site_id == site_id)
+
+    if strata_name is not None:
+        normalized_strata_name = strata_name.strip()
+        if not normalized_strata_name:
+            raise HTTPException(status_code=400, detail="Invalid strata filter.")
+
+        strata_query = db.query(Strata.id).filter(
+            Strata.study_id == study.id,
+            Strata.name == normalized_strata_name,
+        )
+        if site_id is not None:
+            strata_query = strata_query.filter(Strata.site_id == site_id)
+        if not strata_query.first():
+            raise HTTPException(status_code=400, detail="Invalid strata filter.")
+
+        query = query.join(
+            Strata, RandomizationRecord.strata_id == Strata.id
+        ).filter(Strata.name == normalized_strata_name)
+
     if search:
         s = f"%{search.strip()}%"
         query = query.filter(
