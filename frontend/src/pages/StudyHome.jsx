@@ -547,91 +547,107 @@ function StudyHome() {
                       </div>
 
                       <div className="table-toolbar__filters-row table-toolbar__filters-row--primary">
-                        <select
-                          value={siteFilter}
-                          onChange={handleSiteFilterChange}
-                          className="select-input"
-                          aria-label="Filter by site"
-                          style={{
-                            padding: '6px 10px',
-                            fontSize: '13px',
-                          }}
-                        >
-                          <option value="">All Sites</option>
-                          {sitesData.map((site) => (
-                            <option key={site.id} value={site.id}>
-                              {site.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="field table-toolbar__filter-field">
+                          <label htmlFor="records-site-filter">Site</label>
+                          <select
+                            id="records-site-filter"
+                            value={siteFilter}
+                            onChange={handleSiteFilterChange}
+                            className="select-input"
+                            style={{
+                              padding: '6px 10px',
+                              fontSize: '13px',
+                            }}
+                          >
+                            <option value="">All Sites</option>
+                            {sitesData.map((site) => (
+                              <option key={site.id} value={site.id}>
+                                {site.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                        <select
-                          value={strataFilter}
-                          onChange={handleStrataFilterChange}
-                          className="select-input"
-                          aria-label="Filter by strata"
-                          style={{
-                            padding: '6px 10px',
-                            fontSize: '13px',
-                          }}
-                        >
-                          <option value="">All Strata</option>
-                          {stratasData.map((strata) => (
-                            <option key={strata.name} value={strata.name}>
-                              {strata.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="field table-toolbar__filter-field">
+                          <label htmlFor="records-strata-filter">Strata</label>
+                          <select
+                            id="records-strata-filter"
+                            value={strataFilter}
+                            onChange={handleStrataFilterChange}
+                            className="select-input"
+                            style={{
+                              padding: '6px 10px',
+                              fontSize: '13px',
+                            }}
+                          >
+                            <option value="">All Strata</option>
+                            {stratasData.map((strata) => (
+                              <option key={strata.name} value={strata.name}>
+                                {strata.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                        <select
-                          value={statusFilter}
-                          onChange={handleFilterChange}
-                          className="select-input"
-                          aria-label="Filter records"
-                          style={{
-                            padding: '6px 10px',
-                            fontSize: '13px',
-                          }}
-                        >
-                          <option value="">All</option>
-                          <option value="assigned">Assigned</option>
-                          <option value="unassigned">Unassigned</option>
-                          <option value="blinded">Blinded</option>
-                          <option value="unblinded">Unblinded</option>
-                        </select>
+                        <div className="field table-toolbar__filter-field">
+                          <label htmlFor="records-status-filter">Status</label>
+                          <select
+                            id="records-status-filter"
+                            value={statusFilter}
+                            onChange={handleFilterChange}
+                            className="select-input"
+                            style={{
+                              padding: '6px 10px',
+                              fontSize: '13px',
+                            }}
+                          >
+                            <option value="">All</option>
+                            <option value="assigned">Assigned</option>
+                            <option value="unassigned">Unassigned</option>
+                            <option value="blinded">Blinded</option>
+                            <option value="unblinded">Unblinded</option>
+                          </select>
+                        </div>
                       </div>
 
                       <div className="table-toolbar__filters-row table-toolbar__filters-row--secondary">
-                        <input
-                          type="text"
-                          placeholder={`Search kit, drug, ${PARTICIPANT_LABEL.toLowerCase()}...`}
-                          value={search}
-                          onChange={handleSearchChange}
-                          className="field input"
-                          style={{
-                            padding: '6px 10px',
-                            fontSize: '13px',
-                            border: '1px solid #b0b0b0',
-                            borderRadius: '3px',
-                            outline: 'none',
-                          }}
-                        />
+                        <div className="field table-toolbar__filter-field">
+                          <label htmlFor="records-search">Search</label>
+                          <input
+                            id="records-search"
+                            type="text"
+                            placeholder={`Kit, drug, ${PARTICIPANT_LABEL.toLowerCase()}...`}
+                            value={search}
+                            onChange={handleSearchChange}
+                            className="field input"
+                            style={{
+                              padding: '6px 10px',
+                              fontSize: '13px',
+                              border: '1px solid #b0b0b0',
+                              borderRadius: '3px',
+                              outline: 'none',
+                            }}
+                          />
+                        </div>
 
-                        <select
-                          value={perPage}
-                          onChange={handlePerPageChange}
-                          className="select-input"
-                          aria-label="Records per page"
-                          style={{
-                            padding: '6px 10px',
-                            fontSize: '13px',
-                          }}
-                        >
-                          <option value={10}>10 per page</option>
-                          <option value={20}>20 per page</option>
-                          <option value={50}>50 per page</option>
-                          <option value={100}>100 per page</option>
-                        </select>
+                        <div className="field table-toolbar__filter-field">
+                          <label htmlFor="records-per-page">Pagination</label>
+                          <select
+                            id="records-per-page"
+                            value={perPage}
+                            onChange={handlePerPageChange}
+                            className="select-input"
+                            style={{
+                              padding: '6px 10px',
+                              fontSize: '13px',
+                            }}
+                          >
+                            <option value={10}>10 per page</option>
+                            <option value={20}>20 per page</option>
+                            <option value={50}>50 per page</option>
+                            <option value={100}>100 per page</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>

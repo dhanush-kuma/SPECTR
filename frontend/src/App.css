@@ -664,6 +664,10 @@
   grid-template-columns: 3fr 2fr;
 }
 
+.table-toolbar__filter-field {
+  min-width: 0;
+}
+
 .table-toolbar__filters-row .select-input,
 .table-toolbar__filters-row .field.input {
   width: 100%;
