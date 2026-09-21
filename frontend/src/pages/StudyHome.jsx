@@ -5,6 +5,7 @@ import Header from '../components/Header'
 import { ORGANIZER_LABEL, INVESTIGATOR_LABEL, PARTICIPANT_LABEL, PARTICIPANT_LABEL_PLURAL } from '../labels'
 import { BLINDING_TYPE, blindingTypeLabel } from '../utils/blindingType'
 import { downloadCsv, rowsToCsv } from '../utils/csv'
+import { buildMaskedArmMap, maskTreatmentArm } from '../utils/treatmentArmMasking'
 
 const TABLE_ACTION_BTN_STYLE = {
   fontSize: '13px',
@@ -203,13 +204,19 @@ function StudyHome() {
     setExportingRecords(true)
     try {
       const records = await fetchAllRandomizationRecords()
-      const hideTreatmentArm = study?.blinding_type === BLINDING_TYPE.PISB
+      const maskTreatmentArms = study?.blinding_type === BLINDING_TYPE.PISB
+      const armMaskMap = maskTreatmentArms
+        ? buildMaskedArmMap(
+            records.map((rec) => rec.treatment_name),
+            (study?.treatment_arms || []).map((arm) => arm.name),
+          )
+        : null
       const headers = [
         'Seq #',
         'Kit Code',
         'Site',
         'Strata',
-        ...(hideTreatmentArm ? [] : ['Treatment Arm']),
+        'Treatment Arm',
         'Blind Status',
         `${PARTICIPANT_LABEL} ID`,
         `${INVESTIGATOR_LABEL} ID`,
@@ -223,7 +230,9 @@ function StudyHome() {
         rec.kit_code || '',
         rec.site_name || '',
         rec.strata_name || '',
-        ...(hideTreatmentArm ? [] : [rec.treatment_name || '']),
+        maskTreatmentArms
+          ? maskTreatmentArm(rec.treatment_name, armMaskMap)
+          : (rec.treatment_name || ''),
         rec.blind ? 'Blinded' : 'Unblinded',
         rec.assigned_patient_id || '',
         rec.assigned_by_investigator_username
