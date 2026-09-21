@@ -15,10 +15,49 @@ from ..config import (
     SMTP_PORT,
     SMTP_USE_TLS,
     SMTP_USER,
+    ZEPTOMAIL_API_KEY,
     email_is_configured,
+    zeptomail_api_url,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _zeptomail_auth_header() -> str:
+    key = ZEPTOMAIL_API_KEY.strip()
+    prefix = "Zoho-enczapikey"
+    if key.lower().startswith(prefix.lower()):
+        return key
+    return f"{prefix} {key}"
+
+
+def _send_via_zeptomail(to: str, subject: str, body: str) -> None:
+    """Send email using ZeptoMail's HTTP API (avoids outbound SMTP port blocks)."""
+    payload = json.dumps({
+        "from": {"address": SMTP_FROM, "name": "SPECTR"},
+        "to": [{"email_address": {"address": to}}],
+        "subject": subject,
+        "textbody": body,
+    }).encode()
+
+    req = urllib.request.Request(
+        zeptomail_api_url(),
+        data=payload,
+        headers={
+            "Authorization": _zeptomail_auth_header(),
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            if resp.status not in (200, 201):
+                raise RuntimeError(f"ZeptoMail API returned status {resp.status}")
+    except urllib.error.HTTPError as exc:
+        body_text = exc.read().decode(errors="replace")
+        logger.error("ZeptoMail API error %s: %s", exc.code, body_text)
+        raise RuntimeError(f"ZeptoMail API error {exc.code}: {body_text}") from exc
 
 
 def _send_via_resend(to: str, subject: str, body: str) -> None:
@@ -86,8 +125,10 @@ def send_email(to: str, subject: str, body: str) -> None:
         return
 
     try:
-        if RESEND_API_KEY:
+        if ZEPTOMAIL_API_KEY:
             # Preferred on Railway — HTTP API bypasses SMTP port restrictions.
+            _send_via_zeptomail(to, subject, body)
+        elif RESEND_API_KEY:
             _send_via_resend(to, subject, body)
         else:
             _send_via_smtp(to, subject, body)

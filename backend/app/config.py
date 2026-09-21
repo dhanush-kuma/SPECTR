@@ -60,13 +60,33 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", "")
 SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() in ("true", "1", "yes")
 
-# Resend HTTP API key — preferred over SMTP on Railway (avoids outbound SMTP port blocks).
-# Set RESEND_API_KEY + SMTP_FROM; leave SMTP_HOST empty when using this mode.
+# ZeptoMail HTTP API — preferred on Railway (avoids outbound SMTP port blocks).
+# Set ZEPTOMAIL_API_KEY + SMTP_FROM; optionally set ZEPTOMAIL_REGION (default: com).
+ZEPTOMAIL_API_KEY = os.environ.get("ZEPTOMAIL_API_KEY", "")
+ZEPTOMAIL_REGION = os.environ.get("ZEPTOMAIL_REGION", "com").lower().strip()
+
+_ZEPTOMAIL_API_HOSTS: dict[str, str] = {
+    "com": "api.zeptomail.com",
+    "eu": "api.zeptomail.eu",
+    "in": "api.zeptomail.in",
+    "com.au": "api.zeptomail.com.au",
+    "com.cn": "api.zeptomail.com.cn",
+    "jp": "api.zeptomail.jp",
+    "ca": "api.zeptomail.ca",
+    "sa": "api.zeptomail.sa",
+}
+
+# Resend HTTP API key — alternative HTTP provider.
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 
 
+def zeptomail_api_url() -> str:
+    host = _ZEPTOMAIL_API_HOSTS.get(ZEPTOMAIL_REGION, _ZEPTOMAIL_API_HOSTS["com"])
+    return f"https://{host}/v1.1/email"
+
+
 def email_is_configured() -> bool:
-    return bool(SMTP_FROM and (RESEND_API_KEY or SMTP_HOST))
+    return bool(SMTP_FROM and (ZEPTOMAIL_API_KEY or RESEND_API_KEY or SMTP_HOST))
 
 if IS_PRODUCTION:
     if not SECRET_KEY or SECRET_KEY == DEFAULT_SECRET_KEY:

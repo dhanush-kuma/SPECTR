@@ -69,7 +69,7 @@ Site Investigator (investigator)
 | Database | PostgreSQL |
 | Auth | bcrypt passwords, JWT in HttpOnly cookies |
 | Frontend | React 19, Vite, React Router |
-| Email | Resend HTTP API (preferred) or SMTP via `smtplib` |
+| Email | ZeptoMail HTTP API (preferred), Resend HTTP API, or SMTP via `smtplib` |
 | Deploy | Docker (combined frontend + backend), Railway |
 
 ---
@@ -90,7 +90,7 @@ Site Investigator (investigator)
 │   │   │   ├── csrf.py              # CSRF middleware
 │   │   │   ├── rate_limit.py        # slowapi rate limiter
 │   │   │   ├── audit.py             # Structured audit logging
-│   │   │   ├── email.py             # Resend/SMTP + credential & unblind emails
+│   │   │   ├── email.py             # ZeptoMail/Resend/SMTP + credential & unblind emails
 │   │   │   ├── investigators.py     # Username/password generation
 │   │   │   ├── investigator_invite.py  # Single + bulk site investigator invites
 │   │   │   ├── organizer_invite.py  # CTC invite + password reset
@@ -187,8 +187,10 @@ Copy `backend/.env.example` → `backend/.env`.
 | `CORS_ORIGINS` | No | Comma-separated frontend URLs |
 | `FRONTEND_URL` | Yes* | Base URL in credential emails |
 | `SMTP_FROM` | Prod** | Sender address |
-| `RESEND_API_KEY` | Prod** | Resend HTTP API (preferred on Railway) |
-| `SMTP_*` | Alt** | SMTP fallback when Resend is not used |
+| `ZEPTOMAIL_API_KEY` | Prod** | ZeptoMail Send Mail Token (preferred on Railway) |
+| `ZEPTOMAIL_REGION` | No | ZeptoMail datacenter: `com`, `in`, `eu`, etc. (default `com`) |
+| `RESEND_API_KEY` | Alt** | Resend HTTP API |
+| `SMTP_*` | Alt** | SMTP fallback when no HTTP API key is set |
 | `COOKIE_SECURE` | Cross-domain | Set `true` with HTTPS |
 | `COOKIE_SAMESITE` | Cross-domain | Set `none` for cross-domain cookies |
 
@@ -445,7 +447,7 @@ POST /admin/organizers/
 Backend:
   1. Organizer.username = email
   2. generate_temp_password()
-  3. send_organizer_credentials() via Resend/SMTP
+  3. send_organizer_credentials() via ZeptoMail/Resend/SMTP
         ↓
 CTC logs in at /organizer/login with email + password
 ```
@@ -463,7 +465,7 @@ Backend:
   1. generate_username()  → "K7M2P9", "R3H8WN", …
   2. generate_temp_password()
   3. INSERT investigator (status=inactive, site_id set)
-  4. send_investigator_credentials() via Resend/SMTP
+  4. send_investigator_credentials() via ZeptoMail/Resend/SMTP
      (dev without email: credentials logged to console)
         ↓
 Site investigator logs in with username + password

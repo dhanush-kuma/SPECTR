@@ -132,7 +132,7 @@ Copy `backend/.env.example` to `backend/.env` and set:
 | `SETUP_TOKEN` | Yes | Protects first-run admin setup |
 | `FRONTEND_URL` | Yes | Public URL used in site investigator credential emails |
 | `CORS_ORIGINS` | Yes | Comma-separated allowed frontend origins |
-| `SMTP_*` or `RESEND_API_KEY` | Yes | Email delivery for site investigator credentials |
+| `ZEPTOMAIL_API_KEY` or `RESEND_API_KEY` or `SMTP_*` | Yes | Email delivery for site investigator credentials |
 
 For cross-domain HTTPS deployments, also set `COOKIE_SECURE=true` and `COOKIE_SAMESITE=none`.
 
