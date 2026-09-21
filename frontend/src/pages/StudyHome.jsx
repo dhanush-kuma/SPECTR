@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
-import { apiFetch } from '../api'
+import { apiFetch, parseApiError } from '../api'
 import Header from '../components/Header'
 import { ORGANIZER_LABEL, INVESTIGATOR_LABEL, PARTICIPANT_LABEL, PARTICIPANT_LABEL_PLURAL } from '../labels'
 import { BLINDING_TYPE, blindingTypeLabel } from '../utils/blindingType'
@@ -18,12 +18,29 @@ const TABLE_ACTION_BTN_STYLE = {
   lineHeight: 1.2,
 }
 
+const HEADER_ACTION_BTN_STYLE = {
+  fontSize: '12px',
+  padding: '4px 10px',
+  whiteSpace: 'nowrap',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '76px',
+  boxSizing: 'border-box',
+  lineHeight: 1.2,
+}
+
 function StudyHome() {
   const { studyId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const [study, setStudy] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
   const successMsg = location.state?.successMsg || null
+
+  const canDeleteStudy = study && ['Draft', 'Generated'].includes(study.status)
 
   // Pagination & Filter state for Active Study Randomized Records
   const [page, setPage] = useState(1)
@@ -161,6 +178,27 @@ function StudyHome() {
     return allRecords
   }
 
+  async function handleDeleteStudy() {
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await apiFetch(`/organizer/studies/${studyId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setDeleteError(parseApiError(data.detail) || 'Failed to delete study.')
+        return
+      }
+      navigate('/organizer/home', {
+        replace: true,
+        state: { successMsg: `Study "${study.protocol_code}" was deleted.` },
+      })
+    } catch {
+      setDeleteError('Failed to delete study.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   async function handleExportRecords() {
     setExportingRecords(true)
     try {
@@ -218,6 +256,7 @@ function StudyHome() {
         </div>
 
         {successMsg && <p className="success-msg">{successMsg}</p>}
+        {deleteError && <p className="error">{deleteError}</p>}
 
         {study && (
           <>
@@ -269,10 +308,52 @@ function StudyHome() {
                   <Link
                     to={`/organizer/studies/${studyId}/edit`}
                     className="btn-secondary"
-                    style={{ textDecoration: 'none', fontSize: '12px', padding: '4px 10px' }}
+                    style={{ ...HEADER_ACTION_BTN_STYLE, textDecoration: 'none' }}
                   >
                     Edit
                   </Link>
+                  {canDeleteStudy && !confirmDelete && (
+                    <button
+                      type="button"
+                      className="btn-danger"
+                      style={HEADER_ACTION_BTN_STYLE}
+                      disabled={deleting}
+                      onClick={() => {
+                        setDeleteError(null)
+                        setConfirmDelete(true)
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
+                  {canDeleteStudy && confirmDelete && (
+                    <div className="action-confirm" style={{ margin: 0 }}>
+                      <p className="action-confirm__text" style={{ margin: 0 }}>
+                        Permanently delete <strong>{study.title}</strong> ({study.protocol_code}) and all related data?
+                        This cannot be undone.
+                      </p>
+                      <div className="action-confirm__buttons">
+                        <button
+                          type="button"
+                          className="btn-danger"
+                          style={{ fontSize: '12px', padding: '4px 10px' }}
+                          disabled={deleting}
+                          onClick={handleDeleteStudy}
+                        >
+                          {deleting ? 'Deleting…' : 'Yes, delete'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: '12px', padding: '4px 10px' }}
+                          disabled={deleting}
+                          onClick={() => setConfirmDelete(false)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -37,7 +37,12 @@ from ..core.security import (
     remember_me_from_access_token,
     revoke_token,
 )
-from ..core.study_status import CSV_REUPLOAD_BLOCKED_STATUSES, GENERATED, LOCKED_STATUSES
+from ..core.study_status import (
+    CSV_REUPLOAD_BLOCKED_STATUSES,
+    DELETABLE_STATUSES,
+    GENERATED,
+    LOCKED_STATUSES,
+)
 from ..database import get_db
 from ..models import Investigator, Organizer, RandomizationRecord, Site, Strata, Study, TreatmentArm
 from ..schemas import (
@@ -498,6 +503,35 @@ def get_study(
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
     return _get_study_for_organizer(study_id, current_organizer.id, db)
+
+
+@router.delete("/studies/{study_id}", response_model=MessageResponse)
+def delete_study(
+    study_id: int,
+    db: Session = Depends(get_db),
+    current_organizer: Organizer = Depends(get_current_organizer),
+):
+    study = _get_study_for_organizer(study_id, current_organizer.id, db)
+
+    if study.status not in DELETABLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Only draft or generated studies can be deleted. "
+                "Active or completed studies cannot be removed."
+            ),
+        )
+
+    protocol_code = study.protocol_code
+    db.delete(study)
+    db.commit()
+    audit(
+        "study.deleted",
+        study_id=study_id,
+        protocol_code=protocol_code,
+        organizer=current_organizer.username,
+    )
+    return MessageResponse(message="Study deleted successfully.")
 
 
 @router.patch("/studies/{study_id}", response_model=StudyOut)
