@@ -222,6 +222,47 @@ If you did not request this, please contact your system administrator.
     send_email(to_email, subject, body)
 
 
+def send_participant_allocation_notification(
+    to_email: str,
+    *,
+    study_title: str,
+    protocol_code: str,
+    patient_id: str,
+    kit_code: str,
+    site_name: str | None = None,
+    stratum_name: str | None = None,
+) -> None:
+    subject = f"Participant allocation — {study_title}"
+    site_line = (
+        f"  Site         : {site_name.strip()}\n"
+        if site_name and site_name.strip()
+        else ""
+    )
+    stratum_line = (
+        f"  Stratum      : {stratum_name.strip()}\n"
+        if stratum_name and stratum_name.strip()
+        else ""
+    )
+
+    body = f"""Hello,
+
+This is to confirm that a participant has been allocated in your study.
+
+Study: {study_title}
+Protocol: {protocol_code.strip()}
+
+Allocation:
+  Participant ID : {patient_id}
+  Kit Code       : {kit_code}
+{site_line}{stratum_line}
+You are receiving this message because allocation alerts are enabled for this study.
+
+— SPECTR
+"""
+
+    send_email(to_email, subject, body)
+
+
 def send_unblind_notification(
     to_email: str,
     *,

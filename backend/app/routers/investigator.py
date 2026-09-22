@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
 from ..core.blinding_type import BlindingType, investigator_is_blinded
-from ..core.email import send_unblind_notification
+from ..core.email import send_participant_allocation_notification, send_unblind_notification
 from ..core.investigator_invite import reset_investigator_password
 from ..core.rate_limit import limiter
 from ..core.study_status import ACTIVE, COMPLETE, GENERATED
@@ -399,6 +399,30 @@ def assign_kit(
         study_status=study.status,
         ip=request.client.host if request.client else None,
     )
+
+    if study.email_allocation:
+        organizer = study.organizer
+        if organizer:
+            site = (
+                db.query(Site)
+                .filter(Site.id == current_investigator.site_id)
+                .first()
+            )
+            try:
+                send_participant_allocation_notification(
+                    organizer.username,
+                    study_title=study.title,
+                    protocol_code=study.protocol_code,
+                    patient_id=patient_id,
+                    kit_code=record.kit_code,
+                    site_name=site.name if site else None,
+                    stratum_name=strata.name,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to send allocation notification to CTC for study %s",
+                    study.id,
+                )
 
     return _investigator_record_out(
         record,

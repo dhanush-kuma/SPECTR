@@ -469,6 +469,7 @@ def create_study(
         random_seed=None,
         block_size_rules=payload.block_size_rules.strip() if payload.block_size_rules else None,
         emergency_unblinding_allowed=payload.emergency_unblinding_allowed,
+        email_allocation=payload.email_allocation,
         inclusion_exclusion_criteria=(
             payload.inclusion_exclusion_criteria.model_dump()
             if payload.inclusion_exclusion_criteria

@@ -257,6 +257,7 @@ class StudyCreate(BaseModel):
     randomization_method: str = "Permuted Block"
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: bool = True
+    email_allocation: bool = False
     inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     treatment_arms: list[TreatmentArmCreate] = []
 
@@ -283,6 +284,7 @@ class StudyUpdate(BaseModel):
     randomization_method: Optional[str] = None
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: Optional[bool] = None
+    email_allocation: Optional[bool] = None
     inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     status: Optional[str] = None
 
@@ -315,6 +317,7 @@ class StudyOut(BaseModel):
     randomization_method: str
     block_size_rules: Optional[str] = None
     emergency_unblinding_allowed: bool
+    email_allocation: bool
     inclusion_exclusion_criteria: Optional[InclusionExclusionCriteria] = None
     status: str
     created_at: datetime

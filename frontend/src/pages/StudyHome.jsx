@@ -39,6 +39,8 @@ function StudyHome() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
+  const [allocationEmailSaving, setAllocationEmailSaving] = useState(false)
+  const [allocationEmailError, setAllocationEmailError] = useState(null)
   const successMsg = location.state?.successMsg || null
 
   const canDeleteStudy = study && ['Draft', 'Generated'].includes(study.status)
@@ -179,6 +181,35 @@ function StudyHome() {
     return allRecords
   }
 
+  async function handleEmailAllocationChange(checked) {
+    if (!study) return
+    setAllocationEmailSaving(true)
+    setAllocationEmailError(null)
+    const previous = study.email_allocation
+    setStudy((current) => ({ ...current, email_allocation: checked }))
+    try {
+      const res = await apiFetch(`/organizer/studies/${studyId}`, {
+        method: 'PATCH',
+        json: { email_allocation: checked },
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setStudy((current) => ({ ...current, email_allocation: previous }))
+        setAllocationEmailError(
+          parseApiError(data.detail) || 'Could not update allocation alert setting.'
+        )
+        return
+      }
+      const data = await res.json()
+      setStudy(data)
+    } catch {
+      setStudy((current) => ({ ...current, email_allocation: previous }))
+      setAllocationEmailError('Could not update allocation alert setting.')
+    } finally {
+      setAllocationEmailSaving(false)
+    }
+  }
+
   async function handleDeleteStudy() {
     setDeleting(true)
     setDeleteError(null)
@@ -298,7 +329,7 @@ function StudyHome() {
                   )}
                 </p>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {study.status === 'Draft' && (
                     <span style={{ fontSize: '13px', color: '#555', fontStyle: 'italic' }}>
                       Draft Mode — Complete setup to generate randomization
@@ -364,6 +395,21 @@ function StudyHome() {
                     </div>
                   )}
                 </div>
+              </div>
+              <div className="field-checkbox" style={{ marginTop: '12px' }}>
+                <label htmlFor="email-allocation-alert" className="checkbox-label" style={{ fontWeight: 500, fontSize: '13px' }}>
+                  <input
+                    id="email-allocation-alert"
+                    type="checkbox"
+                    checked={Boolean(study.email_allocation)}
+                    disabled={allocationEmailSaving}
+                    onChange={(e) => handleEmailAllocationChange(e.target.checked)}
+                  />
+                  Email me when a participant is allocated
+                </label>
+                {allocationEmailError && (
+                  <span className="field-hint" style={{ color: '#b00020' }}>{allocationEmailError}</span>
+                )}
               </div>
             </div>
 

@@ -74,6 +74,9 @@ class Study(Base):
     emergency_unblinding_allowed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )
+    email_allocation: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     inclusion_exclusion_criteria: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="Draft")
     created_at: Mapped[datetime] = mapped_column(
