@@ -41,6 +41,11 @@ function AdminOrganizerDetail() {
   const [studies, setStudies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [studyCountInput, setStudyCountInput] = useState('')
+  const [recordsCountInput, setRecordsCountInput] = useState('')
+  const [countsSaving, setCountsSaving] = useState(false)
+  const [countsError, setCountsError] = useState(null)
+  const [countsSuccess, setCountsSuccess] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -61,6 +66,8 @@ function AdminOrganizerDetail() {
         const detail = await detailRes.json()
         const studyList = studiesRes.ok ? await studiesRes.json() : []
         setOrganizer(detail)
+        setStudyCountInput(String(detail.study_count_limit ?? 0))
+        setRecordsCountInput(String(detail.records_per_study_limit ?? 0))
         setStudies(studyList)
       })
       .catch((err) => {
@@ -68,6 +75,47 @@ function AdminOrganizerDetail() {
       })
       .finally(() => setLoading(false))
   }, [organizerId, navigate])
+
+  async function handleSaveCounts(e) {
+    e.preventDefault()
+    setCountsError(null)
+    setCountsSuccess(null)
+
+    const studyCount = Number.parseInt(studyCountInput, 10)
+    const recordsCount = Number.parseInt(recordsCountInput, 10)
+    if (
+      !Number.isFinite(studyCount) ||
+      studyCount < 0 ||
+      !Number.isFinite(recordsCount) ||
+      recordsCount < 0
+    ) {
+      setCountsError(
+        'Study count and randomization records per study must be whole numbers zero or greater.',
+      )
+      return
+    }
+
+    setCountsSaving(true)
+    try {
+      const res = await apiFetch(`/admin/organizers/${organizerId}/counts`, {
+        method: 'PATCH',
+        json: { study_count: studyCount, records_count: recordsCount },
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setCountsError(data.detail || 'Failed to update counts.')
+        return
+      }
+      setOrganizer(data)
+      setStudyCountInput(String(data.study_count_limit ?? 0))
+      setRecordsCountInput(String(data.records_per_study_limit ?? 0))
+      setCountsSuccess('Counts updated.')
+    } catch {
+      setCountsError('Could not connect to backend.')
+    } finally {
+      setCountsSaving(false)
+    }
+  }
 
   const status = organizer
     ? ORGANIZER_STATUS_LABELS[organizer.status] || {
@@ -118,6 +166,57 @@ function AdminOrganizerDetail() {
               </p>
             </div>
 
+            <div className="status-card" style={{ marginBottom: '24px' }}>
+              <div className="label">Recorded counts</div>
+              <p className="message" style={{ margin: '4px 0 0', fontSize: '13px' }}>
+                Adjust the study and randomization records per study shown for this{' '}
+                {ORGANIZER_LABEL} on the admin dashboard.
+              </p>
+              <form className="setup-form" onSubmit={handleSaveCounts} style={{ padding: '16px 0 0' }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '16px',
+                  }}
+                >
+                  <div className="field">
+                    <label htmlFor="organizer-study-count">Studies</label>
+                    <input
+                      id="organizer-study-count"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      value={studyCountInput}
+                      onChange={(e) => setStudyCountInput(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="organizer-records-per-study">
+                      Randomization records per study
+                    </label>
+                    <input
+                      id="organizer-records-per-study"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="numeric"
+                      value={recordsCountInput}
+                      onChange={(e) => setRecordsCountInput(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {countsError && <p className="error">{countsError}</p>}
+                {countsSuccess && <p className="success-msg">{countsSuccess}</p>}
+                <div className="form-actions">
+                  <button type="submit" className="btn-primary" disabled={countsSaving}>
+                    {countsSaving ? 'Saving…' : 'Save counts'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
             <h2 className="section-title" style={{ marginBottom: '12px' }}>Resource Usage</h2>
             <div className="stats-grid" style={{ marginBottom: '28px' }}>
               <StatCard label="Studies" value={organizer.study_count} />
@@ -148,7 +247,7 @@ function AdminOrganizerDetail() {
                       <th>Status</th>
                       <th>Sites</th>
                       <th>{INVESTIGATOR_LABEL_PLURAL}</th>
-                      <th>Kits</th>
+                      <th>Records</th>
                       <th>Assigned</th>
                       <th>Unassigned</th>
                       <th>Created</th>

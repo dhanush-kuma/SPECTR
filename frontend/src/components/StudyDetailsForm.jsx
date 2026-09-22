@@ -14,6 +14,7 @@ function StudyDetailsForm({
   onSubmit,
   submitLabel = 'Save Changes',
   submitting = false,
+  submitDisabled = false,
   error = null,
   successMsg = null,
   cancelLink = null,
@@ -227,7 +228,7 @@ function StudyDetailsForm({
       </div>
 
       <div className="form-actions" style={{ marginTop: '24px' }}>
-        <button type="submit" className="btn-primary" disabled={submitting}>
+        <button type="submit" className="btn-primary" disabled={submitting || submitDisabled}>
           {submitting ? 'Saving…' : submitLabel}
         </button>
         {cancelLink}

@@ -4,7 +4,33 @@ from typing import Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from ..models import Investigator, OrganizerTermsAcceptance, RandomizationRecord, Site, Study
+from ..models import Investigator, Organizer, OrganizerTermsAcceptance, RandomizationRecord, Site, Study
+
+
+def records_per_study_limit_detail(*, record_count: int, limit: int, action: str) -> str:
+    """Human-readable error when randomization row count exceeds CTC per-study allowance."""
+    record_word = "record" if record_count == 1 else "records"
+    limit_word = "record" if limit == 1 else "records"
+    return (
+        f"{action} {record_count} randomization {record_word}, but your allowance is "
+        f"{limit} {limit_word} per study. Contact administrator to increase your limit."
+    )
+
+
+def get_study_quota_for_organizer(db: Session, organizer: Organizer) -> dict[str, int]:
+    """Allowance from organizer.study_count vs studies the CTC has created."""
+    study_limit = organizer.study_count
+    studies_created = (
+        db.query(func.count(Study.id))
+        .filter(Study.organizer_id == organizer.id)
+        .scalar()
+    ) or 0
+    studies_remaining = max(0, study_limit - studies_created)
+    return {
+        "study_limit": study_limit,
+        "studies_created": studies_created,
+        "studies_remaining": studies_remaining,
+    }
 
 
 def get_organizer_usage_stats(db: Session, organizer_id: int) -> dict[str, int]:

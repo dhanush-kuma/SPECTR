@@ -15,6 +15,7 @@ from ..core.investigator_invite import (
     parse_investigator_csv,
 )
 from ..core.organizer_invite import reset_organizer_password
+from ..core.organizer_stats import get_study_quota_for_organizer, records_per_study_limit_detail
 from ..core.organizer_terms import (
     ORGANIZER_DISABLED_MESSAGE,
     TERMS_REQUIRED_MESSAGE,
@@ -226,11 +227,17 @@ def _parse_block_size_rules(rules: str | None) -> tuple[int | None, int | None]:
 def get_me(
     response: Response,
     organizer_access_token: str | None = Cookie(default=None),
+    db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
     cookie_max_age = cookie_max_age_for_access_token(organizer_access_token)
     csrf_token = set_csrf_cookie(response, cookie_max_age)
-    return OrganizerInfo(username=current_organizer.username, csrf_token=csrf_token)
+    quota = get_study_quota_for_organizer(db, current_organizer)
+    return OrganizerInfo(
+        username=current_organizer.username,
+        csrf_token=csrf_token,
+        **quota,
+    )
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -426,12 +433,29 @@ def logout(
     return MessageResponse(message="Logged out successfully.")
 
 
+STUDY_LIMIT_REACHED_DETAIL = (
+    "You have reached your study allowance ({limit} stud{limit_suffix}). "
+    "Contact your administrator to request a higher limit."
+)
+
+
 @router.post("/studies/", response_model=StudyOut, status_code=201)
 def create_study(
     payload: StudyCreate,
     db: Session = Depends(get_db),
     current_organizer: Organizer = Depends(get_current_organizer),
 ):
+    quota = get_study_quota_for_organizer(db, current_organizer)
+    if quota["studies_remaining"] <= 0:
+        limit = quota["study_limit"]
+        raise HTTPException(
+            status_code=403,
+            detail=STUDY_LIMIT_REACHED_DETAIL.format(
+                limit=limit,
+                limit_suffix="y" if limit == 1 else "ies",
+            ),
+        )
+
     _ensure_protocol_code_available(db, payload.protocol_code)
 
     study = Study(
@@ -938,6 +962,18 @@ async def upload_randomization_csv(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    row_count = len(parsed_rows)
+    records_limit = current_organizer.records_count
+    if row_count > records_limit:
+        raise HTTPException(
+            status_code=403,
+            detail=records_per_study_limit_detail(
+                record_count=row_count,
+                limit=records_limit,
+                action="This upload contains",
+            ),
+        )
+
     try:
         new_records = persist_csv_randomization(db, study_id, parsed_rows)
 
@@ -1272,6 +1308,17 @@ def generate_randomization(
         raise HTTPException(
             status_code=400,
             detail="Target sample size must be set and be at least 1 before generating.",
+        )
+
+    records_limit = current_organizer.records_count
+    if n > records_limit:
+        raise HTTPException(
+            status_code=403,
+            detail=records_per_study_limit_detail(
+                record_count=n,
+                limit=records_limit,
+                action="This generation would create",
+            ),
         )
 
     valid_methods = {"Simple Random", "Permuted Block", "Minimization"}

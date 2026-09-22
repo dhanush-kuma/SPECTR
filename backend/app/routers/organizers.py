@@ -25,6 +25,7 @@ from ..schemas import (
     OrganizerDetailOut,
     OrganizerOut,
     OrganizerSummaryOut,
+    UpdateOrganizerCountsRequest,
 )
 
 router = APIRouter(prefix="/admin/organizers", tags=["organizers"])
@@ -56,6 +57,8 @@ def _organizer_summary_out(organizer: Organizer, db: Session) -> OrganizerSummar
         ),
         created_at=organizer.created_at,
         **stats,
+        study_count_limit=organizer.study_count,
+        records_per_study_limit=organizer.records_count,
     )
 
 
@@ -127,6 +130,34 @@ def get_organizer_studies(
     _get_organizer_or_404(organizer_id, db)
     summaries = get_study_summaries_for_organizer(db, organizer_id)
     return [AdminStudySummaryOut(**summary) for summary in summaries]
+
+
+@router.patch("/{organizer_id}/counts", response_model=OrganizerDetailOut)
+@limiter.limit("30/hour")
+def update_organizer_counts(
+    request: Request,
+    organizer_id: int,
+    payload: UpdateOrganizerCountsRequest,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    organizer = _get_organizer_or_404(organizer_id, db)
+    organizer.study_count = payload.study_count
+    organizer.records_count = payload.records_count
+    db.commit()
+    db.refresh(organizer)
+    audit(
+        "organizer.counts_updated",
+        organizer=organizer.username,
+        study_count=payload.study_count,
+        records_count=payload.records_count,
+        admin=current_admin.username,
+    )
+    summary = _organizer_summary_out(organizer, db)
+    return OrganizerDetailOut(
+        **summary.model_dump(),
+        terms_accepted_at=get_organizer_terms_accepted_at(db, organizer.id),
+    )
 
 
 @router.patch("/{organizer_id}/status", response_model=OrganizerOut)

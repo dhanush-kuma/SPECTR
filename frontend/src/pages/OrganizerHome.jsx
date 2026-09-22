@@ -131,7 +131,6 @@ function OrganizerHome() {
                     <th>Protocol Code</th>
                     <th>Title</th>
                     <th>Blinding</th>
-                    <th>Method</th>
                     <th>Sample Size</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -146,7 +145,6 @@ function OrganizerHome() {
                       </td>
                       <td>{study.title}</td>
                       <td>{blindingTypeShortLabel(study.blinding_type)}</td>
-                      <td>{study.randomization_method}</td>
                       <td>{study.target_sample_size ?? 'N/A'}</td>
                       <td>
                         <span

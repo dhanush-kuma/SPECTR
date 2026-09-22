@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { apiFetch, apiUpload, storeCsrfFromResponse } from '../api'
+import { apiFetch, apiUpload, storeCsrfFromResponse, parseApiError } from '../api'
 import Header from '../components/Header'
 
 // --- Sample CSV content (embedded so no static file config needed) ---
@@ -125,7 +125,7 @@ function UploadCSV() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.detail || `Upload failed (${res.status}).`)
+        setError(parseApiError(data.detail) || `Upload failed (${res.status}).`)
         return
       }
 

@@ -4,6 +4,16 @@ import { apiFetch, storeCsrfFromResponse, parseApiError } from '../api'
 import Header from '../components/Header'
 import StudyDetailsForm from '../components/StudyDetailsForm'
 
+function studyLimitMessage(org) {
+  const limit = org.study_limit ?? 0
+  const created = org.studies_created ?? 0
+  if (limit <= 0 && created <= 0) {
+    return 'Your account has no study allowance configured yet. Contact administrator before creating a study.'
+  }
+  const limitWord = limit === 1 ? 'study' : 'studies'
+  return `You have used all ${limit} ${limitWord} allowed on your account (${created} created). Contact administrator to request a higher limit.`
+}
+
 function CreateStudy() {
   const { studyId } = useParams()
   const isEditMode = Boolean(studyId)
@@ -51,8 +61,23 @@ function CreateStudy() {
       .finally(() => setLoadingStudy(false))
   }, [isEditMode, studyId, navigate])
 
+  const atStudyLimit =
+    !isEditMode &&
+    organizer != null &&
+    (organizer.studies_remaining ?? 0) <= 0
+
   async function handleSubmit(payload) {
     setError(null)
+
+    if (
+      !isEditMode &&
+      organizer != null &&
+      (organizer.studies_remaining ?? 0) <= 0
+    ) {
+      setError(studyLimitMessage(organizer))
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -118,7 +143,18 @@ function CreateStudy() {
         {isLoading ? (
           <p className="loading">{isEditMode ? 'Loading study…' : 'Verifying session…'}</p>
         ) : (
-          <div className="study-form-card">
+          <div className="study-form-stack">
+            {atStudyLimit && (
+              <div
+                className="pb-blinding-warning"
+                role="alert"
+                style={{ marginBottom: '12px', textAlign: 'left' }}
+              >
+                <strong>Study creation quota reached.</strong> {studyLimitMessage(organizer)}
+              </div>
+            )}
+
+            <div className="study-form-card">
             <div className="setup-card__header">
               <div
                 style={{
@@ -161,6 +197,7 @@ function CreateStudy() {
               onSubmit={handleSubmit}
               submitLabel={isEditMode ? 'Save Changes' : 'Create Study'}
               submitting={submitting}
+              submitDisabled={atStudyLimit}
               error={error}
               cancelLink={
                 <Link
@@ -172,6 +209,7 @@ function CreateStudy() {
                 </Link>
               }
             />
+            </div>
           </div>
         )}
       </main>

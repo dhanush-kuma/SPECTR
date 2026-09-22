@@ -191,7 +191,7 @@ function AdminHome() {
                     <th>Status</th>
                     <th>Studies</th>
                     <th>Investigators</th>
-                    <th>Kits</th>
+                    <th>Records per study</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -212,9 +212,9 @@ function AdminHome() {
                           {status.label}
                         </span>
                       </td>
-                      <td>{org.study_count ?? 0}</td>
+                      <td>{org.study_count_limit ?? 0}</td>
                       <td>{org.investigator_count ?? 0}</td>
-                      <td>{org.total_randomization_records ?? 0}</td>
+                      <td>{org.records_per_study_limit ?? 0}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           <Link

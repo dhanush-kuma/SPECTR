@@ -814,6 +814,12 @@
 }
 
 /* ── Study Form Page ─────────────────────────────────────── */
+.study-form-stack {
+  max-width: 720px;
+  width: 100%;
+  min-width: 0;
+}
+
 .study-form-card {
   background: #ffffff;
   border: 1px solid #d0d0d0;

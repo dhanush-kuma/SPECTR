@@ -157,10 +157,24 @@ class OrganizerSummaryOut(BaseModel):
     investigator_count: int
     total_randomization_records: int
     assigned_participants: int
+    study_count_limit: int
+    records_per_study_limit: int
 
 
 class OrganizerDetailOut(OrganizerSummaryOut):
     terms_accepted_at: Optional[datetime] = None
+
+
+class UpdateOrganizerCountsRequest(BaseModel):
+    study_count: int
+    records_count: int
+
+    @field_validator("study_count", "records_count")
+    @classmethod
+    def non_negative(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("Count must be zero or greater")
+        return v
 
 
 class AdminStudySummaryOut(BaseModel):
@@ -190,6 +204,9 @@ class AcceptTermsRequest(BaseModel):
 class OrganizerInfo(BaseModel):
     username: str
     csrf_token: str
+    study_limit: int
+    studies_created: int
+    studies_remaining: int
 
 
 class TreatmentArmCreate(BaseModel):
