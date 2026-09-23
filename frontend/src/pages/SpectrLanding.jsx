@@ -1,6 +1,6 @@
 const GITHUB_URL = 'https://github.com/dhanush-kuma/SPECTR'
 const DOCS_URL = 'https://github.com/dhanush-kuma/SPECTR/blob/main/docs/ENGINEERING.md'
-const SITE_URL = 'https://spectr.mmmr.in'
+const SITE_URL = 'https://spectr.mmmr.in/services/spectr'
 const ONBOARDING_EMAIL = 'mmmedicalresearch@outlook.com'
 
 const SUPPORTS = [
@@ -23,7 +23,7 @@ const SUPPORTS = [
   {
     title: 'Custom Sequences & Stratification',
     text:
-      'Ingests complex permuted blocks stratified by site and one additional factor (e.g., age, sex, severity).',
+      'Ingests complex permuted blocks stratified by site and one additional factor (e.g., age, sex, severity, etc.).',
   },
   {
     title: 'Zero Direct Patient Identifiers',
@@ -34,7 +34,7 @@ const SUPPORTS = [
     text: 'Strictly confines investigators to their assigned institutional lists.',
   },
   {
-    title: 'Blinding Options',
+    title: 'Blinding options',
     text: 'Supports participant, investigator, and statistician blinding.',
   },
   {
@@ -52,7 +52,7 @@ function SpectrLanding() {
     <article className="landing">
       <header className="landing__hero">
         <h1 className="landing__title">
-          SPECTR: Secure Point-of-care Enrollment and Centralized Trial Randomization
+          SPECTR&trade;: Secure Point-of-care Enrollment and Centralized Trial Randomization
         </h1>
         <p className="landing__lead">
           A free, open-source, GCP-compliant central allocation engine engineered for academic,
@@ -84,10 +84,11 @@ function SpectrLanding() {
       <section className="landing__section">
         <h2>Overview</h2>
         <p>
-          SPECTR provides central randomization and allocation concealment for clinical trialists.
-          Designed and validated by trial methodologists, it eliminates the vulnerability of physical
-          sealed envelopes (SNOSE) and avoids the prohibitive licensing costs of enterprise
-          RTSM/IWRS platforms.
+          SPECTR&trade; provides central randomization and allocation concealment for clinical
+          trialists. Designed and validated by trial methodologists, it eliminates the vulnerability
+          of physical sealed envelopes (SNOSE) and avoids the prohibitive licensing costs of
+          enterprise Randomization and Trial Supply Management (RTSM)/ Interactive Web Response System
+          (IWRS) platforms.
         </p>
         <p>
           By uploading your own pre-computed randomisation sequences, SPECTR delivers instantaneous,
@@ -175,8 +176,8 @@ function SpectrLanding() {
           </li>
           <li>
             <strong>Audit Logging &amp; Central Confirmation:</strong> The system generates an
-            immutable UTC-stamped audit entry — verifiable by the site investigator and the trial
-            coordinating center.
+            immutable UTC-stamped audit entry - verifiable by the site investigator and the trial
+            coordinating center, with an option to receive email alerts.
           </li>
         </ol>
       </section>
@@ -204,6 +205,9 @@ function SpectrLanding() {
           Kerala, India.
         </p>
         <p>
+          SPECTR&trade; is a trademark of MM Medical Research (OPC) Pvt. Ltd.
+        </p>
+        <p>
           <strong>Source Code:</strong> Available under the AGPLv3 License on{' '}
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>.
         </p>
@@ -220,7 +224,12 @@ function SpectrLanding() {
           </li>
           <li>
             <strong>Sponsorship &amp; Funding:</strong> Academic/investigator-initiated,
-            not-for-profit, or commercial (include grant status)
+            not-for-profit, or commercial (include grant status).
+          </li>
+          <li>
+            <strong>Support Requirement:</strong> Indicate whether you require Self-Service Access or
+            a paid Managed Onboarding &amp; Sequence Generation service package from experts at MM
+            Medical Research.
           </li>
         </ul>
       </footer>
