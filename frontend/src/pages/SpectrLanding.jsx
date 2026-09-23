@@ -1,6 +1,6 @@
 const GITHUB_URL = 'https://github.com/dhanush-kuma/SPECTR'
 const DOCS_URL = 'https://github.com/dhanush-kuma/SPECTR/blob/main/docs/ENGINEERING.md'
-const SITE_URL = 'https://mmmr.in/services/spectr'
+const SITE_URL = 'https://spectr.mmmr.in'
 const ONBOARDING_EMAIL = 'mmmedicalresearch@outlook.com'
 
 const SUPPORTS = [

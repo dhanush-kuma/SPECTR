@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from .organizer_terms import CURRENT_TOS_VERSION
 from ..models import Investigator, Organizer, OrganizerTermsAcceptance, RandomizationRecord, Site, Study
 
 
@@ -92,7 +93,10 @@ def get_organizer_terms_accepted_at(
 ) -> Optional[datetime]:
     row = (
         db.query(OrganizerTermsAcceptance.accepted_at)
-        .filter(OrganizerTermsAcceptance.organizer_id == organizer_id)
+        .filter(
+            OrganizerTermsAcceptance.organizer_id == organizer_id,
+            OrganizerTermsAcceptance.tos_version == CURRENT_TOS_VERSION,
+        )
         .order_by(OrganizerTermsAcceptance.accepted_at.desc())
         .first()
     )

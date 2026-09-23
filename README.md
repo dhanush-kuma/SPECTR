@@ -162,7 +162,7 @@ For architecture, API reference, authentication, database schema, and troublesho
 
 When reporting methodology in trial protocols, ethics submissions, or peer-reviewed publications, please cite:
 
-> Pradeep M, Kumar D. SPECTR: Secure Point-of-care Enrollment and Centralized Trial Randomization [Computer software]. Available from: https://mmmr.in/services/spectr
+> Pradeep M, Kumar D. SPECTR: Secure Point-of-care Enrollment and Centralized Trial Randomization [Computer software]. Available from: https://spectr.mmmr.in
 
 ## Developed and maintained by
 

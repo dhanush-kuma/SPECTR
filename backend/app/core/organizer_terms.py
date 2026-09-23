@@ -20,7 +20,10 @@ ORGANIZER_DISABLED_MESSAGE = "This account has been disabled by an administrator
 def organizer_has_accepted_terms(db: Session, organizer_id: int) -> bool:
     return (
         db.query(OrganizerTermsAcceptance.id)
-        .filter(OrganizerTermsAcceptance.organizer_id == organizer_id)
+        .filter(
+            OrganizerTermsAcceptance.organizer_id == organizer_id,
+            OrganizerTermsAcceptance.tos_version == CURRENT_TOS_VERSION,
+        )
         .first()
         is not None
     )
