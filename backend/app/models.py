@@ -236,7 +236,7 @@ class RandomizationRecord(Base):
 
 
 class AuditLog(Base):
-    """Immutable assignment audit trail (DB triggers block UPDATE/DELETE)."""
+    """Immutable trial audit trail (DB triggers block UPDATE/DELETE)."""
 
     __tablename__ = "audit_logs"
 

@@ -7,25 +7,26 @@ from sqlalchemy.orm import Session
 from ..models import AuditLog, Investigator, RandomizationRecord, Study
 
 EVENT_PARTICIPANT_KIT_ASSIGNED = "participant_kit_assigned"
+EVENT_EMERGENCY_UNBLINDED = "emergency_unblinded"
 
 
-def log_participant_kit_assignment(
+def _append_audit_log(
     db: Session,
     *,
+    event_type: str,
     record: RandomizationRecord,
     study: Study,
     investigator: Investigator,
     site_name: str,
     stratum_name: str,
     study_status: str,
-    assigned_at: datetime,
+    event_at: datetime,
     client_ip: str | None,
 ) -> None:
-    """Persist an immutable snapshot of a site-investigator kit assignment."""
     organizer = study.organizer
     db.add(
         AuditLog(
-            event_type=EVENT_PARTICIPANT_KIT_ASSIGNED,
+            event_type=event_type,
             randomization_record_id=record.id,
             study_id=study.id,
             study_title=study.title,
@@ -47,6 +48,60 @@ def log_participant_kit_assignment(
             treatment_arm=record.treatment_name,
             blinding_type=study.blinding_type,
             client_ip=client_ip,
-            assigned_at=assigned_at,
+            assigned_at=event_at,
         )
+    )
+
+
+def log_participant_kit_assignment(
+    db: Session,
+    *,
+    record: RandomizationRecord,
+    study: Study,
+    investigator: Investigator,
+    site_name: str,
+    stratum_name: str,
+    study_status: str,
+    assigned_at: datetime,
+    client_ip: str | None,
+) -> None:
+    """Persist an immutable snapshot of a site-investigator kit assignment."""
+    _append_audit_log(
+        db,
+        event_type=EVENT_PARTICIPANT_KIT_ASSIGNED,
+        record=record,
+        study=study,
+        investigator=investigator,
+        site_name=site_name,
+        stratum_name=stratum_name,
+        study_status=study_status,
+        event_at=assigned_at,
+        client_ip=client_ip,
+    )
+
+
+def log_emergency_unblind(
+    db: Session,
+    *,
+    record: RandomizationRecord,
+    study: Study,
+    investigator: Investigator,
+    site_name: str,
+    stratum_name: str,
+    study_status: str,
+    unblinded_at: datetime,
+    client_ip: str | None,
+) -> None:
+    """Persist an immutable snapshot of an emergency unblinding event."""
+    _append_audit_log(
+        db,
+        event_type=EVENT_EMERGENCY_UNBLINDED,
+        record=record,
+        study=study,
+        investigator=investigator,
+        site_name=site_name,
+        stratum_name=stratum_name,
+        study_status=study_status,
+        event_at=unblinded_at,
+        client_ip=client_ip,
     )

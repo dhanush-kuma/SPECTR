@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
-from ..core.audit_logs import log_participant_kit_assignment
+from ..core.audit_logs import log_emergency_unblind, log_participant_kit_assignment
 from ..core.blinding_type import BlindingType, investigator_is_blinded
 from ..core.email import send_participant_allocation_notification, send_unblind_notification
 from ..core.investigator_invite import reset_investigator_password
@@ -541,7 +541,12 @@ def unblind_record(
     if not record:
         raise HTTPException(status_code=404, detail="Assigned record not found.")
 
-    study = db.query(Study).filter(Study.id == current_investigator.study_id).first()
+    study = (
+        db.query(Study)
+        .options(joinedload(Study.organizer))
+        .filter(Study.id == current_investigator.study_id)
+        .first()
+    )
     if not study or not investigator_is_blinded(study.blinding_type):
         raise HTTPException(
             status_code=403,
@@ -553,7 +558,28 @@ def unblind_record(
             detail="Emergency unblinding is disabled for this study.",
         )
 
+    site = db.query(Site).filter(Site.id == current_investigator.site_id).first()
+    site_name = site.name if site else ""
+    stratum_name = ""
+    if record.strata_id:
+        strata = db.query(Strata).filter(Strata.id == record.strata_id).first()
+        stratum_name = strata.name if strata else ""
+
+    unblinded_at = datetime.now(timezone.utc)
     record.blind = False
+
+    log_emergency_unblind(
+        db,
+        record=record,
+        study=study,
+        investigator=current_investigator,
+        site_name=site_name,
+        stratum_name=stratum_name,
+        study_status=study.status,
+        unblinded_at=unblinded_at,
+        client_ip=request.client.host if request.client else None,
+    )
+
     db.commit()
     db.refresh(record)
 
@@ -564,6 +590,7 @@ def unblind_record(
         record_id=record.id,
         patient_id=record.assigned_patient_id,
         treatment_name=record.treatment_name,
+        ip=request.client.host if request.client else None,
     )
 
     organizer = study.organizer
