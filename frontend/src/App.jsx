@@ -7,6 +7,7 @@ import AdminGuard from './pages/AdminGuard'
 import AdminLogin from './pages/AdminLogin'
 import AdminHome from './pages/AdminHome'
 import AdminOrganizerDetail from './pages/AdminOrganizerDetail'
+import AdminAuditLogs from './pages/AdminAuditLogs'
 import AdminProtectedRoute from './pages/AdminProtectedRoute'
 import OrganizerGuard from './pages/OrganizerGuard'
 import OrganizerLogin from './pages/OrganizerLogin'
@@ -46,6 +47,14 @@ function App() {
         element={
           <AdminProtectedRoute>
             <AdminOrganizerDetail />
+          </AdminProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <AdminProtectedRoute>
+            <AdminAuditLogs />
           </AdminProtectedRoute>
         }
       />

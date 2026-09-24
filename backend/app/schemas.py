@@ -411,6 +411,7 @@ class RandomizationRecordOut(BaseModel):
     assigned_by_investigator_name: Optional[str] = None
     assigned_by_investigator_email: Optional[str] = None
     assigned_at: Optional[datetime] = None
+    unblinded_at: Optional[datetime] = None
     blind: bool = True
     site_id: Optional[int] = None
     strata_id: Optional[int] = None
@@ -475,6 +476,36 @@ class UnblindResponse(BaseModel):
     record_id: int
     treatment_name: str
     message: str
+
+
+class AuditLogOut(BaseModel):
+    id: int
+    event_type: str
+    study_id: int
+    study_title: str
+    protocol_code: str
+    study_status: str
+    participant_id: str
+    sequence_number: int
+    kit_code: str
+    treatment_arm: str
+    site_name: str
+    site_investigator_username: str
+    site_investigator_email: str
+    ctc_username: str
+    client_ip: Optional[str] = None
+    assigned_at: datetime
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PaginatedAuditLogs(BaseModel):
+    total_count: int
+    page: int
+    per_page: int
+    total_pages: int
+    items: list[AuditLogOut]
 
 
 class GenerateRandomizationRequest(BaseModel):

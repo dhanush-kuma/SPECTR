@@ -77,6 +77,7 @@ def _investigator_record_out(
         assigned_by_investigator_name=investigator_name if has_assigner else None,
         assigned_by_investigator_email=investigator_email if has_assigner else None,
         assigned_at=record.assigned_at,
+        unblinded_at=record.unblinded_at,
         blind=record.blind,
     )
 
@@ -567,6 +568,7 @@ def unblind_record(
 
     unblinded_at = datetime.now(timezone.utc)
     record.blind = False
+    record.unblinded_at = unblinded_at
 
     log_emergency_unblind(
         db,

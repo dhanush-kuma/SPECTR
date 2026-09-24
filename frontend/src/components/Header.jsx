@@ -22,6 +22,7 @@ function Header({ children }) {
 
   const showAdminNav =
     location.pathname === '/admin/home' ||
+    location.pathname === '/admin/audit-logs' ||
     /^\/admin\/organizers\/\d+$/.test(location.pathname)
 
   return (

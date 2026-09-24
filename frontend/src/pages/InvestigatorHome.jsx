@@ -7,6 +7,12 @@ import { INVESTIGATOR_LABEL, ORGANIZER_LABEL, PARTICIPANT_LABEL } from '../label
 import { BLINDING_TYPE, investigatorIsBlinded } from '../utils/blindingType'
 import { downloadCsv, rowsToCsv } from '../utils/csv'
 
+function formatExportDateTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString()
+}
+
 function hasInclusionExclusionCriteria(criteria) {
   if (!criteria) return false
   return (
@@ -214,6 +220,7 @@ function InvestigatorHome() {
         [unblindModalRecord.id]: data.treatment_name,
       }))
       setUnblindModalRecord(null)
+      loadAssignments()
     } catch {
       setUnblindError('Could not connect to backend.')
     } finally {
@@ -239,6 +246,8 @@ function InvestigatorHome() {
       'Assigned By',
       `${INVESTIGATOR_LABEL} Name`,
       `${INVESTIGATOR_LABEL} Email`,
+      'Assigned At',
+      'Unblinded At',
       'Treatment Arm',
     ]
 
@@ -249,6 +258,8 @@ function InvestigatorHome() {
       rec.assigned_by_investigator_username || '',
       rec.assigned_by_investigator_id ? (rec.assigned_by_investigator_name || '') : '',
       rec.assigned_by_investigator_id ? (rec.assigned_by_investigator_email || '') : '',
+      formatExportDateTime(rec.assigned_at),
+      formatExportDateTime(rec.unblinded_at),
       getTreatmentArmForExport(rec),
     ])
 

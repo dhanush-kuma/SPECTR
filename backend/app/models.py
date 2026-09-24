@@ -221,6 +221,9 @@ class RandomizationRecord(Base):
     assigned_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    unblinded_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     blind: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     site_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("sites.id", ondelete="SET NULL"), nullable=True

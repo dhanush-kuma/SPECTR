@@ -126,6 +126,13 @@ function AdminHome() {
               </p>
             </div>
 
+            <div className="section-header" style={{ marginBottom: '28px' }}>
+              <h2 className="section-title">Audit trail</h2>
+              <Link to="/admin/audit-logs" className="btn-secondary">
+                View audit logs
+              </Link>
+            </div>
+
             <div className="section-header">
               <h2 className="section-title">{ORGANIZER_LABEL_PLURAL}</h2>
               {!showForm && (

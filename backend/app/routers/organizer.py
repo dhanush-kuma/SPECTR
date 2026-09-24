@@ -179,6 +179,7 @@ def _randomization_record_out(record: RandomizationRecord) -> RandomizationRecor
         assigned_by_investigator_name=inv.name if inv and has_assigner else None,
         assigned_by_investigator_email=inv.email if inv and has_assigner else None,
         assigned_at=record.assigned_at,
+        unblinded_at=record.unblinded_at,
         blind=record.blind,
         site_id=record.site_id,
         strata_id=record.strata_id,
