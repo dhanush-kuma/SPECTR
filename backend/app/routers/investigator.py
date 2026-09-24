@@ -13,6 +13,13 @@ from ..core.audit_logs import log_emergency_unblind, log_participant_kit_assignm
 from ..core.blinding_type import BlindingType, investigator_is_blinded
 from ..core.email import send_participant_allocation_notification, send_unblind_notification
 from ..core.investigator_invite import reset_investigator_password
+from ..core.idempotency import (
+    ASSIGN_KIT_ENDPOINT,
+    build_assign_kit_fingerprint,
+    complete_idempotency,
+    require_idempotency_key,
+    resolve_idempotency,
+)
 from ..core.investigators import (
     INVESTIGATOR_CTC_DISABLED_MESSAGE,
     INVESTIGATOR_REVOKED_MESSAGE,
@@ -346,6 +353,19 @@ def assign_kit(
             detail="Invalid stratum selection for your site.",
         )
 
+    idempotency_key = require_idempotency_key(request)
+    fingerprint = build_assign_kit_fingerprint(patient_id, payload.strata_id)
+    cached, leader_row = resolve_idempotency(
+        db,
+        investigator_id=current_investigator.id,
+        key=idempotency_key,
+        endpoint=ASSIGN_KIT_ENDPOINT,
+        fingerprint=fingerprint,
+    )
+    if cached is not None:
+        return cached
+
+    is_new_allocation = False
     try:
         existing = (
             db.query(RandomizationRecord)
@@ -357,76 +377,115 @@ def assign_kit(
             .first()
         )
         if existing:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Patient ID '{patient_id}' has already been assigned a kit code in this study.",
+            record = existing
+        else:
+            record = (
+                db.query(RandomizationRecord)
+                .filter(
+                    RandomizationRecord.study_id == study_id,
+                    RandomizationRecord.site_id == current_investigator.site_id,
+                    RandomizationRecord.strata_id == payload.strata_id,
+                    RandomizationRecord.assigned_patient_id.is_(None),
+                )
+                .order_by(RandomizationRecord.sequence_number.asc())
+                .with_for_update()
+                .first()
+            )
+            if not record:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"No unassigned kit codes remaining for stratum "
+                        f"'{strata.name}' at this site."
+                    ),
+                )
+
+            is_new_allocation = True
+            assigned_at = datetime.now(timezone.utc)
+            record.assigned_patient_id = patient_id
+            record.assigned_by_investigator_id = current_investigator.id
+            record.assigned_at = assigned_at
+
+            if study.status == GENERATED:
+                study.status = ACTIVE
+
+            # Session uses autoflush=False — flush so the count sees this assignment.
+            db.flush()
+
+            remaining_unassigned = (
+                db.query(RandomizationRecord)
+                .filter(
+                    RandomizationRecord.study_id == study_id,
+                    RandomizationRecord.assigned_patient_id.is_(None),
+                )
+                .count()
+            )
+            if remaining_unassigned == 0 and study.status == ACTIVE:
+                study.status = COMPLETE
+
+            log_participant_kit_assignment(
+                db,
+                record=record,
+                study=study,
+                investigator=current_investigator,
+                site_name=site_name,
+                stratum_name=strata.name,
+                study_status=study.status,
+                assigned_at=assigned_at,
+                client_ip=request.client.host if request.client else None,
             )
 
-        record = (
-            db.query(RandomizationRecord)
-            .filter(
-                RandomizationRecord.study_id == study_id,
-                RandomizationRecord.site_id == current_investigator.site_id,
-                RandomizationRecord.strata_id == payload.strata_id,
-                RandomizationRecord.assigned_patient_id.is_(None),
-            )
-            .order_by(RandomizationRecord.sequence_number.asc())
-            .with_for_update()
-            .first()
+        response = _investigator_record_out(
+            record,
+            blinding_type=study.blinding_type,
+            investigator_username=current_investigator.username,
+            investigator_name=current_investigator.name,
+            investigator_email=current_investigator.email,
         )
-        if not record:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"No unassigned kit codes remaining for stratum "
-                    f"'{strata.name}' at this site."
-                ),
-            )
-
-        assigned_at = datetime.now(timezone.utc)
-        record.assigned_patient_id = patient_id
-        record.assigned_by_investigator_id = current_investigator.id
-        record.assigned_at = assigned_at
-
-        if study.status == GENERATED:
-            study.status = ACTIVE
-
-        # Session uses autoflush=False — flush so the count sees this assignment.
-        db.flush()
-
-        remaining_unassigned = (
-            db.query(RandomizationRecord)
-            .filter(
-                RandomizationRecord.study_id == study_id,
-                RandomizationRecord.assigned_patient_id.is_(None),
-            )
-            .count()
-        )
-        if remaining_unassigned == 0 and study.status == ACTIVE:
-            study.status = COMPLETE
-
-        log_participant_kit_assignment(
-            db,
-            record=record,
-            study=study,
-            investigator=current_investigator,
-            site_name=site_name,
-            stratum_name=strata.name,
-            study_status=study.status,
-            assigned_at=assigned_at,
-            client_ip=request.client.host if request.client else None,
-        )
-
+        complete_idempotency(leader_row, response)
         db.commit()
     except HTTPException:
         db.rollback()
         raise
     except IntegrityError:
         db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail=f"Patient ID '{patient_id}' has already been assigned a kit code in this study.",
-        ) from None
+        raced = (
+            db.query(RandomizationRecord)
+            .filter(
+                RandomizationRecord.study_id == study_id,
+                func.lower(RandomizationRecord.assigned_patient_id) == patient_id.lower(),
+            )
+            .first()
+        )
+        if raced is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Patient ID '{patient_id}' has already been assigned a kit code "
+                    "in this study."
+                ),
+            ) from None
+
+        cached, leader_row = resolve_idempotency(
+            db,
+            investigator_id=current_investigator.id,
+            key=idempotency_key,
+            endpoint=ASSIGN_KIT_ENDPOINT,
+            fingerprint=fingerprint,
+        )
+        if cached is not None:
+            return cached
+
+        response = _investigator_record_out(
+            raced,
+            blinding_type=study.blinding_type,
+            investigator_username=current_investigator.username,
+            investigator_name=current_investigator.name,
+            investigator_email=current_investigator.email,
+        )
+        complete_idempotency(leader_row, response)
+        db.commit()
+        return response
     except Exception:
         db.rollback()
         raise HTTPException(
@@ -434,48 +493,43 @@ def assign_kit(
             detail="An unexpected error occurred while assigning the kit code.",
         )
 
-    db.refresh(record)
-    db.refresh(study)
+    if is_new_allocation:
+        db.refresh(record)
+        db.refresh(study)
 
-    audit(
-        "investigator.kit_assigned",
-        investigator_id=current_investigator.id,
-        study_id=study_id,
-        site_id=current_investigator.site_id,
-        strata_id=payload.strata_id,
-        patient_id=patient_id,
-        kit_code=record.kit_code,
-        sequence_number=record.sequence_number,
-        study_status=study.status,
-        ip=request.client.host if request.client else None,
-    )
+        audit(
+            "investigator.kit_assigned",
+            investigator_id=current_investigator.id,
+            study_id=study_id,
+            site_id=current_investigator.site_id,
+            strata_id=payload.strata_id,
+            patient_id=patient_id,
+            kit_code=record.kit_code,
+            sequence_number=record.sequence_number,
+            study_status=study.status,
+            ip=request.client.host if request.client else None,
+        )
 
-    if study.email_allocation:
-        organizer = study.organizer
-        if organizer:
-            try:
-                send_participant_allocation_notification(
-                    organizer.username,
-                    study_title=study.title,
-                    protocol_code=study.protocol_code,
-                    patient_id=patient_id,
-                    kit_code=record.kit_code,
-                    site_name=site_name or None,
-                    stratum_name=strata.name,
-                )
-            except Exception:
-                logger.exception(
-                    "Failed to send allocation notification to CTC for study %s",
-                    study.id,
-                )
+        if study.email_allocation:
+            organizer = study.organizer
+            if organizer:
+                try:
+                    send_participant_allocation_notification(
+                        organizer.username,
+                        study_title=study.title,
+                        protocol_code=study.protocol_code,
+                        patient_id=patient_id,
+                        kit_code=record.kit_code,
+                        site_name=site_name or None,
+                        stratum_name=strata.name,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to send allocation notification to CTC for study %s",
+                        study.id,
+                    )
 
-    return _investigator_record_out(
-        record,
-        blinding_type=study.blinding_type,
-        investigator_username=current_investigator.username,
-        investigator_name=current_investigator.name,
-        investigator_email=current_investigator.email,
-    )
+    return response
 
 
 @router.get("/assignments", response_model=list[RandomizationRecordOut])

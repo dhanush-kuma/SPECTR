@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiFetch, bootstrapCsrf, parseApiError, setCsrfToken } from '../api'
 import PasswordInput from '../components/PasswordInput'
 import Header from '../components/Header'
@@ -7,6 +7,8 @@ import { INVESTIGATOR_LABEL, ORGANIZER_LABEL } from '../labels'
 
 function InvestigatorLogin() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const sessionExpired = searchParams.get('session') === 'expired'
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
@@ -131,6 +133,11 @@ function InvestigatorLogin() {
             </div>
 
             <form className="setup-form" onSubmit={handleLogin} noValidate>
+              {sessionExpired && (
+                <p className="error" role="status">
+                  Your session expired. Please sign in again.
+                </p>
+              )}
               <div className="field">
                 <label htmlFor="inv-login-username">Username</label>
                 <input

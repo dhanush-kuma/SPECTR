@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { apiFetch, apiLogout, storeCsrfFromResponse } from '../api'
+import { apiFetch, apiLogout, clearCsrfToken, parseApiError, storeCsrfFromResponse } from '../api'
 import Header from '../components/Header'
 import InclusionExclusionModal from '../components/InclusionExclusionModal'
 import { INVESTIGATOR_LABEL, ORGANIZER_LABEL, PARTICIPANT_LABEL } from '../labels'
@@ -11,6 +11,15 @@ function formatExportDateTime(value) {
   if (!value) return ''
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '' : date.toISOString()
+}
+
+function redirectIfSessionExpired(res, navigate) {
+  if (res.status === 401) {
+    clearCsrfToken()
+    navigate('/investigator/login?session=expired', { replace: true })
+    return true
+  }
+  return false
 }
 
 function hasInclusionExclusionCriteria(criteria) {
@@ -59,6 +68,7 @@ function InvestigatorHome() {
   const [error, setError] = useState(null)
   const [ieAttested, setIeAttested] = useState(false)
   const [showIeModal, setShowIeModal] = useState(false)
+  const idempotencyKeyRef = useRef(null)
 
   function loadStrataAvailability() {
     return apiFetch('/investigator/strata-availability')
@@ -116,6 +126,7 @@ function InvestigatorHome() {
   }, [navigate])
 
   useEffect(() => {
+    idempotencyKeyRef.current = null
     setIeAttested(false)
   }, [patientId, selectedStrataId])
 
@@ -158,11 +169,18 @@ function InvestigatorHome() {
       return
     }
 
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = crypto.randomUUID()
+    }
+
     setSubmitting(true)
 
     try {
       const res = await apiFetch('/investigator/assign-kit', {
         method: 'POST',
+        headers: {
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
         json: {
           patient_id: trimmed,
           strata_id: parseInt(selectedStrataId, 10),
@@ -170,11 +188,14 @@ function InvestigatorHome() {
       })
       const data = await res.json()
 
+      if (redirectIfSessionExpired(res, navigate)) return
+
       if (!res.ok) {
-        setError(data.detail || 'Failed to assign kit code.')
+        setError(parseApiError(data.detail) || 'Failed to assign kit code.')
         return
       }
 
+      idempotencyKeyRef.current = null
       setAssignedRecord(data)
       setPatientId('')
       setIeAttested(false)
@@ -209,9 +230,10 @@ function InvestigatorHome() {
       })
       const data = await res.json()
 
+      if (redirectIfSessionExpired(res, navigate)) return
+
       if (!res.ok) {
-        const msg = data.detail || 'Emergency unblinding failed.'
-        setUnblindError(msg)
+        setUnblindError(parseApiError(data.detail) || 'Emergency unblinding failed.')
         return
       }
 
