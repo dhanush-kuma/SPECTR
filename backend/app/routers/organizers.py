@@ -6,6 +6,7 @@ from ..core.organizer_invite import (
     DuplicateOrganizerError,
     create_and_send_organizer_invite,
 )
+from ..core.investigators import invalidate_investigator_sessions_for_organizer
 from ..core.organizer_stats import (
     get_organizer_terms_accepted_at,
     get_organizer_usage_stats,
@@ -173,6 +174,7 @@ def toggle_organizer_status(
     organizer.is_active = not organizer.is_active
     if not organizer.is_active:
         bump_organizer_session(organizer)
+        invalidate_investigator_sessions_for_organizer(db, organizer.id)
     db.commit()
     db.refresh(organizer)
     audit(

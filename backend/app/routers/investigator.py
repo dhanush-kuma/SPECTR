@@ -12,6 +12,11 @@ from ..core.audit import audit
 from ..core.blinding_type import BlindingType, investigator_is_blinded
 from ..core.email import send_participant_allocation_notification, send_unblind_notification
 from ..core.investigator_invite import reset_investigator_password
+from ..core.investigators import (
+    INVESTIGATOR_CTC_DISABLED_MESSAGE,
+    INVESTIGATOR_REVOKED_MESSAGE,
+    investigator_ctc_is_active,
+)
 from ..core.rate_limit import limiter
 from ..core.study_status import ACTIVE, COMPLETE, GENERATED
 from ..core.security import (
@@ -88,12 +93,34 @@ def login(
         .filter(Investigator.username == payload.username)
         .first()
     )
-    if (
-        not investigator
-        or investigator.status == "revoked"
-        or not bcrypt.checkpw(
-            payload.password.encode(), investigator.password_hash.encode()
+    if not investigator:
+        audit(
+            "investigator.login.failed",
+            username=payload.username,
+            ip=request.client.host if request.client else None,
         )
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+
+    if investigator.status == "revoked":
+        audit(
+            "investigator.login.failed",
+            username=payload.username,
+            ip=request.client.host if request.client else None,
+            reason="revoked",
+        )
+        raise HTTPException(status_code=401, detail=INVESTIGATOR_REVOKED_MESSAGE)
+
+    if not investigator_ctc_is_active(db, investigator):
+        audit(
+            "investigator.login.failed",
+            username=payload.username,
+            ip=request.client.host if request.client else None,
+            reason="ctc_disabled",
+        )
+        raise HTTPException(status_code=401, detail=INVESTIGATOR_CTC_DISABLED_MESSAGE)
+
+    if not bcrypt.checkpw(
+        payload.password.encode(), investigator.password_hash.encode()
     ):
         audit(
             "investigator.login.failed",

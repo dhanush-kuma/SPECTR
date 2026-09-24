@@ -8,6 +8,11 @@ from sqlalchemy.orm import Session
 from ..config import JWT_AUDIENCE, JWT_ISSUER, SECRET_KEY
 from ..database import get_db
 from ..models import Admin, Investigator, Organizer, RevokedToken
+from .investigators import (
+    INVESTIGATOR_CTC_DISABLED_MESSAGE,
+    INVESTIGATOR_REVOKED_MESSAGE,
+    investigator_ctc_is_active,
+)
 from .organizer_terms import (
     ORGANIZER_DISABLED_MESSAGE,
     organizer_has_accepted_terms,
@@ -187,7 +192,9 @@ def get_current_investigator(
     if token_session_version is None or token_session_version != investigator.session_version:
         raise HTTPException(status_code=401, detail="Invalid or expired token.")
     if investigator.status == "revoked":
-        raise HTTPException(status_code=401, detail="Investigator access has been revoked.")
+        raise HTTPException(status_code=401, detail=INVESTIGATOR_REVOKED_MESSAGE)
+    if not investigator_ctc_is_active(db, investigator):
+        raise HTTPException(status_code=401, detail=INVESTIGATOR_CTC_DISABLED_MESSAGE)
     return investigator
 
 

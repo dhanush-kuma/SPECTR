@@ -6,7 +6,13 @@ import secrets
 
 from sqlalchemy.orm import Session
 
-from ..models import Investigator
+from ..models import Investigator, Organizer, Study
+
+INVESTIGATOR_CTC_DISABLED_MESSAGE = (
+    "Site investigator access is unavailable because the "
+    "Central Trial Coordinator (CTC) account has been disabled."
+)
+INVESTIGATOR_REVOKED_MESSAGE = "Investigator access has been revoked."
 
 # Unambiguous charset — no 0/O, 1/I/L.
 INVESTIGATOR_USERNAME_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
@@ -36,6 +42,31 @@ def generate_username(db: Session) -> str:
         if not exists:
             return username
     raise RuntimeError("Could not generate a unique investigator username.")
+
+
+def organizer_for_investigator(db: Session, investigator: Investigator) -> Organizer | None:
+    return (
+        db.query(Organizer)
+        .join(Study, Study.organizer_id == Organizer.id)
+        .filter(Study.id == investigator.study_id)
+        .first()
+    )
+
+
+def investigator_ctc_is_active(db: Session, investigator: Investigator) -> bool:
+    organizer = organizer_for_investigator(db, investigator)
+    return organizer is not None and organizer.is_active
+
+
+def invalidate_investigator_sessions_for_organizer(db: Session, organizer_id: int) -> None:
+    investigators = (
+        db.query(Investigator)
+        .join(Study, Investigator.study_id == Study.id)
+        .filter(Study.organizer_id == organizer_id)
+        .all()
+    )
+    for investigator in investigators:
+        investigator.session_version += 1
 
 
 def generate_temp_password() -> str:

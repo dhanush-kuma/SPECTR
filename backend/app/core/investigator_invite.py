@@ -13,6 +13,7 @@ from .email import send_investigator_credentials
 from .investigators import (
     generate_temp_password,
     generate_username,
+    investigator_ctc_is_active,
     normalize_investigator_username,
 )
 from .csv_limits import ensure_csv_size
@@ -144,6 +145,8 @@ def reset_investigator_password(*, username: str, db: Session) -> Investigator |
         .first()
     )
     if not investigator or investigator.status == "revoked":
+        return None
+    if not investigator_ctc_is_active(db, investigator):
         return None
 
     study = db.query(Study).filter(Study.id == investigator.study_id).first()
