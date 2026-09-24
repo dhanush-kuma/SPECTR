@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, SmallInteger, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, JSON, SmallInteger, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .core.blinding_type import BlindingType
@@ -233,3 +233,37 @@ class RandomizationRecord(Base):
     assigned_by_investigator: Mapped[Optional["Investigator"]] = relationship("Investigator")
     site: Mapped[Optional["Site"]] = relationship("Site", back_populates="randomization_records")
     strata: Mapped[Optional["Strata"]] = relationship("Strata", back_populates="randomization_records")
+
+
+class AuditLog(Base):
+    """Immutable assignment audit trail (DB triggers block UPDATE/DELETE)."""
+
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    randomization_record_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    study_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    study_title: Mapped[str] = mapped_column(String(255), nullable=False)
+    protocol_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    study_status: Mapped[str] = mapped_column(String(50), nullable=False)
+    ctc_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    ctc_username: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_investigator_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    site_investigator_username: Mapped[str] = mapped_column(String(8), nullable=False)
+    site_investigator_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_investigator_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    site_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    site_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    strata_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    stratum_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    participant_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    kit_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    treatment_arm: Mapped[str] = mapped_column(String(255), nullable=False)
+    blinding_type: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    client_ip: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

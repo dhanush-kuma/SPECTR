@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..config import clear_auth_cookie, clear_csrf_cookie, set_auth_cookie, set_csrf_cookie
 from ..core.audit import audit
+from ..core.audit_logs import log_participant_kit_assignment
 from ..core.blinding_type import BlindingType, investigator_is_blinded
 from ..core.email import send_participant_allocation_notification, send_unblind_notification
 from ..core.investigator_invite import reset_investigator_password
@@ -317,9 +318,17 @@ def assign_kit(
             detail="Your account is not linked to a site. Contact the study coordinator.",
         )
 
-    study = db.query(Study).filter(Study.id == study_id).first()
+    study = (
+        db.query(Study)
+        .options(joinedload(Study.organizer))
+        .filter(Study.id == study_id)
+        .first()
+    )
     if not study:
         raise HTTPException(status_code=404, detail="Study not found.")
+
+    site = db.query(Site).filter(Site.id == current_investigator.site_id).first()
+    site_name = site.name if site else ""
 
     strata = (
         db.query(Strata)
@@ -373,9 +382,10 @@ def assign_kit(
                 ),
             )
 
+        assigned_at = datetime.now(timezone.utc)
         record.assigned_patient_id = patient_id
         record.assigned_by_investigator_id = current_investigator.id
-        record.assigned_at = datetime.now(timezone.utc)
+        record.assigned_at = assigned_at
 
         if study.status == GENERATED:
             study.status = ACTIVE
@@ -393,6 +403,18 @@ def assign_kit(
         )
         if remaining_unassigned == 0 and study.status == ACTIVE:
             study.status = COMPLETE
+
+        log_participant_kit_assignment(
+            db,
+            record=record,
+            study=study,
+            investigator=current_investigator,
+            site_name=site_name,
+            stratum_name=strata.name,
+            study_status=study.status,
+            assigned_at=assigned_at,
+            client_ip=request.client.host if request.client else None,
+        )
 
         db.commit()
     except HTTPException:
@@ -430,11 +452,6 @@ def assign_kit(
     if study.email_allocation:
         organizer = study.organizer
         if organizer:
-            site = (
-                db.query(Site)
-                .filter(Site.id == current_investigator.site_id)
-                .first()
-            )
             try:
                 send_participant_allocation_notification(
                     organizer.username,
@@ -442,7 +459,7 @@ def assign_kit(
                     protocol_code=study.protocol_code,
                     patient_id=patient_id,
                     kit_code=record.kit_code,
-                    site_name=site.name if site else None,
+                    site_name=site_name or None,
                     stratum_name=strata.name,
                 )
             except Exception:
